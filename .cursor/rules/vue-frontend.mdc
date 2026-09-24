@@ -1,0 +1,30 @@
+---
+description: 前端沿用 create-vue 脚手架，组件用法先查 Context7
+globs: frontend/**/*.{vue,ts}
+alwaysApply: false
+---
+
+# 前端规范
+
+`frontend/` 来自 `npm create vue@latest`（TypeScript、Vue Router、Pinia）。保留脚手架的 `vite.config`、`tsconfig`、`src/main.ts`，只追加 `api`、`layouts`、`views`。
+
+不要改用 Element Plus Vite Starter。它的文件路由和 UnoCSS 与现有 Vue Router、Pinia 冲突。
+
+使用组合式 API 与 `<script setup lang="ts">`。菜单按角色写死两份，不请求菜单树。`meta.role = ADMIN` 的页面，普通用户进无权限页。
+
+写路由、Pinia、Element Plus 之前，用 Context7 查当前文档，库 ID 优先：
+
+- Vue：`/websites/vuejs`
+- Vue Router：`/vuejs/vue-router`
+- Element Plus：`/element-plus/element-plus`
+- Pinia：先解析官方库 ID 再查询
+
+```vue
+<!-- ❌ BAD：页面里写死他人价格 -->
+<span>{{ asset.purchasePrice }}</span>
+
+<!-- ✅ GOOD：只渲染接口返回的字段，普通用户接口本身无价格 -->
+<span>{{ asset.assetNo }}</span>
+```
+
+提交按钮在请求期间禁用。400 和 409 的 `message` 用 `ElMessage` 展示。401 时清除 token 并跳转登录。

@@ -1,0 +1,28 @@
+---
+description: 阶段 1 状态机必须有失败用例，页面按两种角色走通主路径
+alwaysApply: true
+---
+
+# 测试要求
+
+改领用状态时，先补 Service 测试，再改实现。测试放在 `src/test/java/com/ikrai/project/`，包名与主代码一致。
+
+阶段 1 至少覆盖：
+
+- 非在库设备申请失败，并提示当前状态。
+- 驳回不填原因失败。
+- 发放前设备仍是 `PENDING`，发放后才是 `BORROWED`。
+- 重复发放第二次返回 409，设备状态不变。
+- 归还确认后设备为 `IN_STOCK`，可以再次申请。
+- 普通用户查询结果没有购置价格；他人领用中的设备返回 404。
+
+```java
+// ❌ BAD：只断言接口 200
+assertEquals(200, response.getStatus());
+
+// ✅ GOOD：断言单据和设备一起变化
+assertEquals(BORROWING, order.getStatus());
+assertEquals(BORROWED, asset.getStatus());
+```
+
+页面测试在阶段 1 用管理员、普通用户各走通一次主路径。浏览器自动化留到阶段 2。

@@ -1,0 +1,31 @@
+---
+description: 后端遵循阿里巴巴 Java 开发手册的分层与命名
+globs: backend/**/*.java
+alwaysApply: false
+---
+
+# 后端规范
+
+根包 `com.ikrai.project`。依赖只向下：`controller` → `service` → `manager` → `dao`。
+
+- Controller 只做参数校验和角色转发，不写状态判断。
+- 领用事务放在 `BorrowService`。改设备状态走 `AssetManager`，不要让 `AssetService` 调用 `BorrowService`。
+- DAO 只收发 `DO`。类名以 `Dao` 结尾，放在 `dao` 包。
+
+## 模型
+
+`AssetDO` 对应表，不出 Controller。请求用 `DTO`，查询超过 2 个参数用 `Query`，禁止用 `Map` 传查询条件。返回页面用 `VO`。普通用户的 `AssetVO` 不含 `purchasePrice`、`supplier`。禁止 `xxxPOJO`。
+
+```java
+// ❌ BAD：Controller 直接改状态
+asset.setStatus("BORROWED");
+
+// ✅ GOOD：Service 事务内按原状态更新
+assetManager.updateStatus(assetId, PENDING, BORROWED, version);
+```
+
+## 方法名
+
+通用方法前缀：`get`、`list`、`count`、`save`、`update`、`remove`。审批动作用 `approve`、`reject`、`issue`、`confirmReturn`。
+
+包名全小写、单数单词，例如 `controller.asset`、`service.borrow.impl`。
