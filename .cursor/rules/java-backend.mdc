@@ -16,6 +16,15 @@ alwaysApply: false
 
 `AssetDO` 对应表，不出 Controller。请求用 `DTO`，查询超过 2 个参数用 `Query`，禁止用 `Map` 传查询条件。返回页面用 `VO`。普通用户的 `AssetVO` 不含 `purchasePrice`、`supplier`。禁止 `xxxPOJO`。
 
+模型与配置优先用 Lombok，按场景选注解，不要手写 getter/setter：
+
+- VO / DTO / Query / DO：`@Data`
+- 需要无参 + 全参构造（如 `DictVO`、`PageVO`）：`@NoArgsConstructor` + `@AllArgsConstructor`
+- 不可变对象（如 `AuthUser`）：`@Getter` + `@AllArgsConstructor`，不要用 `@Data`
+- 子类 VO：`@Data` + `@EqualsAndHashCode(callSuper = true)`
+
+工具方法优先用 Hutool：`StrUtil` 判空与去空白，`BeanUtil.copyProperties` 做对象拷贝，集合用 `CollUtil`。
+
 ```java
 // ❌ BAD：Controller 直接改状态
 asset.setStatus("BORROWED");

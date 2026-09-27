@@ -1,35 +1,126 @@
 @import './base.css';
 
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-weight: normal;
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
-a,
-.green {
+a {
   text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
+  color: inherit;
 }
 
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
 }
 
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
+.page-panel {
+  background: var(--ams-card);
+  border-radius: 4px;
+  padding: 16px 16px 8px;
+}
 
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
+.page-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--ams-card);
+  border-radius: 4px;
+  padding: 12px 16px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ams-text);
+}
+
+.search-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.search-form .el-form-item {
+  margin-right: 16px;
+  margin-bottom: 12px;
+}
+
+.search-form .el-input,
+.search-form .el-select {
+  width: 200px;
+}
+
+.table-panel {
+  background: var(--ams-card);
+  border-radius: 4px;
+  padding: 8px 16px 16px;
+  min-width: 0;
+}
+
+.table-panel .el-table {
+  font-size: 13px;
+  width: 100%;
+}
+
+.table-panel .el-table th.el-table__cell {
+  background: #fafafa;
+  color: var(--ams-text);
+  font-weight: 600;
+}
+
+.table-panel .el-table .cell {
+  line-height: 22px;
+}
+
+.pager {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.overdue-row {
+  --el-table-tr-bg-color: #fff1f0;
+}
+
+.form-panel {
+  background: var(--ams-card);
+  border-radius: 4px;
+  padding: 16px 24px 24px;
+}
+
+.form-panel .el-form {
+  max-width: 880px;
+}
+
+.detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.detail-head h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.detail-head p {
+  margin: 0;
+  color: var(--ams-text-secondary);
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
 }

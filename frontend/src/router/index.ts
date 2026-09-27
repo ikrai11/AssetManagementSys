@@ -84,9 +84,14 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
-  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
-  if (requiresAuth && !auth.loggedIn) {
+  if (to.name !== 'login' && to.matched.some((record) => record.meta.requiresAuth) && !auth.loggedIn) {
     return { name: 'login', query: { redirect: to.fullPath } }
+  }
+  if (auth.loggedIn && to.name === 'login') {
+    return { name: 'assets' }
+  }
+  if (auth.loggedIn && auth.mustChangePassword && to.name !== 'password') {
+    return { name: 'password' }
   }
   const role = to.matched.find((record) => record.meta.role)?.meta.role
   if (role && auth.role !== role) {

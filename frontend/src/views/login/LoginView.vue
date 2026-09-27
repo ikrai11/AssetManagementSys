@@ -1,14 +1,35 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import type { UserRole } from '@/types/role'
+import { reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import type { FormInstance, FormRules } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
+const formRef = ref<FormInstance>()
+const loading = ref(false)
+const form = reactive({
+  username: '',
+  password: '',
+})
 
-function enter(role: UserRole) {
-  auth.enterPreview(role)
-  router.push({ name: 'assets' })
+const rules: FormRules<typeof form> = {
+  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+}
+
+async function submit() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
+  loading.value = true
+  try {
+    await auth.login(form.username, form.password)
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+    await router.push(auth.mustChangePassword ? { name: 'password' } : redirect)
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -16,11 +37,15 @@ function enter(role: UserRole) {
   <div class="login">
     <el-card class="card">
       <template #header>资产管理系统</template>
-      <p>登录接口尚未接入。可先进入对应角色的页面框架。</p>
-      <div class="actions">
-        <el-button type="primary" @click="enter('ADMIN')">管理员预览</el-button>
-        <el-button @click="enter('USER')">普通用户预览</el-button>
-      </div>
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="submit">
+        <el-form-item label="账号" prop="username">
+          <el-input v-model="form.username" autocomplete="username" />
+        </el-form-item>
+        <el-form-item label="密码" prop="password">
+          <el-input v-model="form.password" type="password" show-password autocomplete="current-password" />
+        </el-form-item>
+        <el-button type="primary" :loading="loading" class="full" native-type="submit">登录</el-button>
+      </el-form>
     </el-card>
   </div>
 </template>
@@ -30,12 +55,12 @@ function enter(role: UserRole) {
   min-height: 100vh;
   display: grid;
   place-items: center;
+  background: #f5f7fa;
 }
 .card {
   width: 420px;
 }
-.actions {
-  display: flex;
-  gap: 12px;
+.full {
+  width: 100%;
 }
 </style>

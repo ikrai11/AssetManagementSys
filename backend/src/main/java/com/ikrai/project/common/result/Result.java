@@ -1,5 +1,8 @@
 package com.ikrai.project.common.result;
 
+import lombok.Data;
+
+@Data
 public class Result<T> {
 
     private int code;
@@ -14,15 +17,10 @@ public class Result<T> {
         return result;
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public T getData() {
-        return data;
+    public static <T> Result<T> fail(int code, String message) {
+        Result<T> result = new Result<>();
+        result.code = code;
+        result.message = message;
+        return result;
     }
 }

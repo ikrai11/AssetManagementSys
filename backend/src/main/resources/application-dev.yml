@@ -6,8 +6,18 @@ spring:
     password: 123456
   flyway:
     enabled: true
-    locations: classpath:db/migration
+    locations: classpath:sql
 
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
+
+ams:
+  jwt:
+    secret: local-dev-jwt-secret-key-please-change-32b
+    expire-hours: 8
+  borrow:
+    max-days: 90
+  init:
+    admin-password: Admin@123
+    user-password: User@123

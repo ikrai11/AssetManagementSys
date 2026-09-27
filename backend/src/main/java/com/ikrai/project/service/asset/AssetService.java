@@ -1,4 +1,21 @@
 package com.ikrai.project.service.asset;
 
+import com.ikrai.project.common.AuthUser;
+import com.ikrai.project.dto.AssetSaveDTO;
+import com.ikrai.project.query.AssetQuery;
+import com.ikrai.project.vo.AssetDetailVO;
+import com.ikrai.project.vo.AssetVO;
+import com.ikrai.project.vo.PageVO;
+
 public interface AssetService {
+
+    AssetVO save(AssetSaveDTO dto);
+
+    AssetVO update(Long id, AssetSaveDTO dto);
+
+    void remove(Long id);
+
+    AssetDetailVO get(Long id, AuthUser viewer);
+
+    PageVO<AssetVO> list(AssetQuery query, AuthUser viewer);
 }
