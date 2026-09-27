@@ -171,6 +171,33 @@ export interface AssetImportResult {
   failures: AssetImportFail[]
 }
 
+export interface SiteMessage {
+  id: number
+  title: string
+  content: string
+  msgType: string
+  msgTypeLabel?: string
+  borrowId?: number
+  read: boolean
+  createdAt?: string
+}
+
+export interface MailRecord {
+  id: number
+  receiverId: number
+  receiverName?: string
+  email?: string
+  subject: string
+  content: string
+  borrowId?: number
+  status: string
+  statusLabel?: string
+  failReason?: string
+  retryCount: number
+  sentAt?: string
+  createdAt?: string
+}
+
 export interface AssetQuery {
   categoryIds?: number[]
   statuses?: string[]

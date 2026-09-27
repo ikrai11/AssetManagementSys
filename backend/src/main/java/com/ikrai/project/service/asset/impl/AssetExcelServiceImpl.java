@@ -11,6 +11,7 @@ import com.ikrai.project.common.AuthUser;
 import com.ikrai.project.common.exception.BusinessException;
 import com.ikrai.project.config.AmsProperties;
 import com.ikrai.project.dao.AssetCategoryDao;
+import com.ikrai.project.common.enums.MessageType;
 import com.ikrai.project.dao.AuditLogDao;
 import com.ikrai.project.dao.SysDeptDao;
 import com.ikrai.project.dao.SysLocationDao;
@@ -22,6 +23,7 @@ import com.ikrai.project.dto.AssetSaveDTO;
 import com.ikrai.project.excel.AssetExportRow;
 import com.ikrai.project.excel.AssetFailRow;
 import com.ikrai.project.excel.AssetImportRow;
+import com.ikrai.project.manager.message.MessageManager;
 import com.ikrai.project.query.AssetQuery;
 import com.ikrai.project.service.asset.AssetExcelService;
 import com.ikrai.project.service.asset.AssetService;
@@ -60,6 +62,7 @@ public class AssetExcelServiceImpl implements AssetExcelService {
     private final SysLocationDao sysLocationDao;
     private final AuditLogDao auditLogDao;
     private final AmsProperties amsProperties;
+    private final MessageManager messageManager;
     private final ConcurrentHashMap<Long, byte[]> failFiles = new ConcurrentHashMap<>();
 
     public AssetExcelServiceImpl(AssetService assetService,
@@ -67,13 +70,15 @@ public class AssetExcelServiceImpl implements AssetExcelService {
                                  SysDeptDao sysDeptDao,
                                  SysLocationDao sysLocationDao,
                                  AuditLogDao auditLogDao,
-                                 AmsProperties amsProperties) {
+                                 AmsProperties amsProperties,
+                                 MessageManager messageManager) {
         this.assetService = assetService;
         this.assetCategoryDao = assetCategoryDao;
         this.sysDeptDao = sysDeptDao;
         this.sysLocationDao = sysLocationDao;
         this.auditLogDao = auditLogDao;
         this.amsProperties = amsProperties;
+        this.messageManager = messageManager;
     }
 
     @Override
@@ -148,8 +153,9 @@ public class AssetExcelServiceImpl implements AssetExcelService {
         } else {
             failFiles.remove(operator.getUserId());
         }
-        audit(operator, "IMPORT", null,
-                "导入成功 " + result.getSuccessCount() + " 行，失败 " + result.getFailCount() + " 行");
+        String summary = "导入成功 " + result.getSuccessCount() + " 行，失败 " + result.getFailCount() + " 行";
+        audit(operator, "IMPORT", null, summary);
+        messageManager.send(operator.getUserId(), MessageType.IMPORT_RESULT, "设备导入完成", summary, null);
         return result;
     }
 

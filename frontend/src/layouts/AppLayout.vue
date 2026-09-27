@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Box, House, Lock, Notebook, SwitchButton, Tickets, User } from '@element-plus/icons-vue'
+import { Bell, Box, House, Lock, Message, Notebook, SwitchButton, Tickets, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import { useMessageStore } from '@/stores/message'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const messages = useMessageStore()
 
 const menus = computed(() => {
   if (auth.role === 'ADMIN') {
@@ -14,8 +16,10 @@ const menus = computed(() => {
       { path: '/home', title: '首页', icon: House },
       { path: '/assets', title: '设备台账', icon: Box },
       { path: '/borrows/todos', title: '领用办理', icon: Tickets },
+      { path: '/messages', title: '消息中心', icon: Bell },
       { path: '/borrows/mine', title: '我的领用', icon: Notebook },
       { path: '/users', title: '用户管理', icon: User },
+      { path: '/mail-records', title: '邮件记录', icon: Message },
       { path: '/password', title: '修改密码', icon: Lock },
     ]
   }
@@ -23,6 +27,7 @@ const menus = computed(() => {
     { path: '/home', title: '首页', icon: House },
     { path: '/assets', title: '设备', icon: Box },
     { path: '/borrows/mine', title: '我的领用', icon: Notebook },
+    { path: '/messages', title: '消息中心', icon: Bell },
     { path: '/password', title: '修改密码', icon: Lock },
   ]
 })
@@ -32,6 +37,13 @@ const roleLabel = computed(() => (auth.role === 'ADMIN' ? '系统管理员' : '�
 onMounted(() => {
   if (auth.loggedIn && !auth.userId) {
     auth.fetchMe()
+  }
+  messages.refresh()
+})
+
+watch(() => route.fullPath, () => {
+  if (auth.loggedIn) {
+    messages.refresh()
   }
 })
 const pageTitle = computed(() => (typeof route.meta.title === 'string' ? route.meta.title : '资产管理系统'))
@@ -64,6 +76,11 @@ async function logout() {
       <el-header class="header" height="50px">
         <h1 class="header-title">{{ pageTitle }}</h1>
         <div class="header-user">
+          <el-badge :value="messages.unread" :max="99" :hidden="messages.unread <= 0" class="msg-badge">
+            <el-button link :icon="Bell" @click="router.push({ name: 'messages', query: { box: 'unread' } })">
+              消息
+            </el-button>
+          </el-badge>
           <span>{{ auth.realName }}（{{ roleLabel }}）</span>
           <el-button link type="primary" :icon="SwitchButton" @click="logout">退出</el-button>
         </div>
@@ -129,9 +146,14 @@ async function logout() {
 .header-user {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   color: var(--ams-text-secondary);
   font-size: 13px;
+}
+
+.msg-badge {
+  display: flex;
+  align-items: center;
 }
 
 .main {

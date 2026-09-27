@@ -6,6 +6,7 @@ import com.ikrai.project.common.AuthUser;
 import com.ikrai.project.common.enums.AssetStatus;
 import com.ikrai.project.common.enums.BorrowLogAction;
 import com.ikrai.project.common.enums.BorrowOrderStatus;
+import com.ikrai.project.common.enums.MessageType;
 import com.ikrai.project.common.exception.BusinessException;
 import com.ikrai.project.common.exception.ConflictException;
 import com.ikrai.project.common.exception.NotFoundException;
@@ -21,6 +22,7 @@ import com.ikrai.project.dataobject.SysUserDO;
 import com.ikrai.project.dto.BorrowCreateDTO;
 import com.ikrai.project.manager.asset.AssetManager;
 import com.ikrai.project.manager.borrow.BorrowManager;
+import com.ikrai.project.manager.message.MessageManager;
 import com.ikrai.project.query.BorrowQuery;
 import com.ikrai.project.service.borrow.BorrowService;
 import com.ikrai.project.vo.BorrowLogVO;
@@ -46,6 +48,7 @@ public class BorrowServiceImpl implements BorrowService {
     private final AssetManager assetManager;
     private final BorrowManager borrowManager;
     private final AmsProperties amsProperties;
+    private final MessageManager messageManager;
 
     public BorrowServiceImpl(BorrowOrderDao borrowOrderDao,
                              BorrowLogDao borrowLogDao,
@@ -53,7 +56,8 @@ public class BorrowServiceImpl implements BorrowService {
                              SysUserDao sysUserDao,
                              AssetManager assetManager,
                              BorrowManager borrowManager,
-                             AmsProperties amsProperties) {
+                             AmsProperties amsProperties,
+                             MessageManager messageManager) {
         this.borrowOrderDao = borrowOrderDao;
         this.borrowLogDao = borrowLogDao;
         this.assetDao = assetDao;
@@ -61,6 +65,7 @@ public class BorrowServiceImpl implements BorrowService {
         this.assetManager = assetManager;
         this.borrowManager = borrowManager;
         this.amsProperties = amsProperties;
+        this.messageManager = messageManager;
     }
 
     @Override
@@ -85,6 +90,7 @@ public class BorrowServiceImpl implements BorrowService {
         if (dto.isSubmit()) {
             assetManager.occupyOnSubmit(asset, order.getId());
             borrowManager.saveLog(order.getId(), BorrowLogAction.SUBMIT, applicant.getUserId(), null);
+            notifyPending(order, asset, applicant);
         }
         return toVo(borrowOrderDao.selectById(order.getId()), false);
     }
@@ -107,6 +113,7 @@ public class BorrowServiceImpl implements BorrowService {
         borrowManager.casUpdateStatus(order, BorrowOrderStatus.PENDING.name());
         assetManager.occupyOnSubmit(asset, order.getId());
         borrowManager.saveLog(order.getId(), BorrowLogAction.SUBMIT, applicant.getUserId(), null);
+        notifyPending(order, asset, applicant);
         return toVo(borrowOrderDao.selectById(order.getId()), false);
     }
 
@@ -138,6 +145,8 @@ public class BorrowServiceImpl implements BorrowService {
         latest.setApprovedAt(LocalDateTime.now());
         borrowOrderDao.updateById(latest);
         borrowManager.saveLog(order.getId(), BorrowLogAction.APPROVE, admin.getUserId(), null);
+        notifyApplicant(order, asset, MessageType.APPROVAL_RESULT, "领用申请已通过",
+                "单号：" + order.getOrderNo() + "\n设备：" + assetText(asset) + "\n请等待管理员发放。");
         return toVo(borrowOrderDao.selectById(order.getId()), false);
     }
 
@@ -157,6 +166,8 @@ public class BorrowServiceImpl implements BorrowService {
         borrowOrderDao.updateById(latest);
         assetManager.release(asset);
         borrowManager.saveLog(order.getId(), BorrowLogAction.REJECT, admin.getUserId(), comment.trim());
+        notifyApplicant(order, asset, MessageType.APPROVAL_RESULT, "领用申请已驳回",
+                "单号：" + order.getOrderNo() + "\n设备：" + assetText(asset) + "\n原因：" + comment.trim());
         return toVo(borrowOrderDao.selectById(order.getId()), false);
     }
 
@@ -179,6 +190,9 @@ public class BorrowServiceImpl implements BorrowService {
         borrowOrderDao.updateById(latest);
         assetManager.issue(asset, order.getApplicantId(), issuedAt.toLocalDate(), order.getExpectedReturnDate());
         borrowManager.saveLog(order.getId(), BorrowLogAction.ISSUE, admin.getUserId(), null);
+        notifyApplicant(order, asset, MessageType.ISSUE, "设备已发放",
+                "单号：" + order.getOrderNo() + "\n设备：" + assetText(asset)
+                        + "\n预计归还日：" + order.getExpectedReturnDate());
         return toVo(borrowOrderDao.selectById(order.getId()), false);
     }
 
@@ -213,6 +227,8 @@ public class BorrowServiceImpl implements BorrowService {
         borrowOrderDao.updateById(latest);
         assetManager.confirmReturn(asset);
         borrowManager.saveLog(order.getId(), BorrowLogAction.CONFIRM_RETURN, admin.getUserId(), blankToNull(comment));
+        notifyApplicant(order, asset, MessageType.RETURN_CONFIRM, "归还已确认",
+                "单号：" + order.getOrderNo() + "\n设备：" + assetText(asset) + "\n设备已回到在库。");
         return toVo(borrowOrderDao.selectById(order.getId()), false);
     }
 
@@ -373,5 +389,23 @@ public class BorrowServiceImpl implements BorrowService {
 
     private String blankToNull(String value) {
         return StrUtil.trimToNull(value);
+    }
+
+    private void notifyPending(BorrowOrderDO order, AssetDO asset, AuthUser applicant) {
+        SysUserDO user = sysUserDao.selectById(applicant.getUserId());
+        String name = user == null ? "" : user.getRealName();
+        String content = "单号：" + order.getOrderNo()
+                + "\n申请人：" + name
+                + "\n设备：" + assetText(asset)
+                + "\n预计归还日：" + order.getExpectedReturnDate();
+        messageManager.sendToAdmins(MessageType.PENDING_APPROVAL, "有新的领用申请待审批", content, order.getId());
+    }
+
+    private void notifyApplicant(BorrowOrderDO order, AssetDO asset, MessageType type, String title, String content) {
+        messageManager.send(order.getApplicantId(), type, title, content, order.getId());
+    }
+
+    private String assetText(AssetDO asset) {
+        return asset.getAssetNo() + " " + asset.getName();
     }
 }

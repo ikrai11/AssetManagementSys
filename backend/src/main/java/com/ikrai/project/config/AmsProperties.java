@@ -13,6 +13,7 @@ public class AmsProperties {
     private final Borrow borrow = new Borrow();
     private final Init init = new Init();
     private final Excel excel = new Excel();
+    private final Mail mail = new Mail();
 
     @Data
     public static class Borrow {
@@ -29,5 +30,11 @@ public class AmsProperties {
     public static class Excel {
         private int importMaxRows = 2000;
         private int exportMaxRows = 10000;
+    }
+
+    @Data
+    public static class Mail {
+        private boolean enabled = false;
+        private String from = "";
     }
 }

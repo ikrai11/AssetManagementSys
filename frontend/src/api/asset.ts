@@ -4,12 +4,12 @@ import type { AssetImportResult, AssetItem, AssetQuery, PageResult, Result } fro
 
 function filenameFrom(disposition: string | undefined, fallback: string) {
   if (!disposition) return fallback
-  const encoded = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(disposition)
-  if (encoded) {
-    return decodeURIComponent(encoded[1].replace(/"/g, ''))
+  const encodedName = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(disposition)?.[1]
+  if (encodedName) {
+    return decodeURIComponent(encodedName.replace(/"/g, ''))
   }
-  const plain = /filename="?([^"]+)"?/i.exec(disposition)
-  return plain ? decodeURIComponent(plain[1]) : fallback
+  const plainName = /filename="?([^"]+)"?/i.exec(disposition)?.[1]
+  return plainName ? decodeURIComponent(plainName) : fallback
 }
 
 function saveBlob(blob: Blob, filename: string) {

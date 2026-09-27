@@ -78,10 +78,22 @@ const router = createRouter({
           meta: { title: '领用详情' },
         },
         {
+          path: 'messages',
+          name: 'messages',
+          component: () => import('@/views/message/MessageCenterView.vue'),
+          meta: { title: '消息中心' },
+        },
+        {
           path: 'users',
           name: 'users',
           component: () => import('@/views/system/UserManageView.vue'),
           meta: { role: 'ADMIN', title: '用户管理' },
+        },
+        {
+          path: 'mail-records',
+          name: 'mail-records',
+          component: () => import('@/views/system/MailRecordView.vue'),
+          meta: { role: 'ADMIN', title: '邮件记录' },
         },
         {
           path: 'password',

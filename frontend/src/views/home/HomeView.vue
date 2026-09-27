@@ -193,6 +193,7 @@ onMounted(load)
     <div v-else class="page-toolbar">
       <el-button type="primary" @click="router.push({ name: 'assets' })">浏览在库设备</el-button>
       <el-button @click="router.push({ name: 'borrow-mine' })">查看我的申请</el-button>
+      <el-button @click="router.push({ name: 'messages', query: { box: 'unread' } })">打开未读消息</el-button>
     </div>
   </div>
 </template>

@@ -61,12 +61,12 @@ onMounted(load)
         </el-tag>
       </div>
       <div class="detail-actions">
-        <el-button v-if="order.status === 'DRAFT'" type="primary" @click="run(() => submitBorrow(order.id), '已提交')">提交</el-button>
-        <el-button v-if="order.status === 'PENDING' && !isAdmin" @click="run(() => withdrawBorrow(order.id), '已撤回')">撤回</el-button>
-        <el-button v-if="isAdmin && order.status === 'PENDING'" type="primary" @click="run(() => approveBorrow(order.id), '已通过')">通过</el-button>
+        <el-button v-if="order.status === 'DRAFT'" type="primary" @click="run(() => submitBorrow(order!.id), '已提交')">提交</el-button>
+        <el-button v-if="order.status === 'PENDING' && !isAdmin" @click="run(() => withdrawBorrow(order!.id), '已撤回')">撤回</el-button>
+        <el-button v-if="isAdmin && order.status === 'PENDING'" type="primary" @click="run(() => approveBorrow(order!.id), '已通过')">通过</el-button>
         <el-button v-if="isAdmin && order.status === 'PENDING'" type="danger" @click="reject">驳回</el-button>
-        <el-button v-if="isAdmin && order.status === 'APPROVED'" type="primary" @click="run(() => issueBorrow(order.id), '已发放')">确认发放</el-button>
-        <el-button v-if="!isAdmin && order.status === 'BORROWING'" type="primary" @click="run(() => requestReturn(order.id), '已申请归还')">申请归还</el-button>
+        <el-button v-if="isAdmin && order.status === 'APPROVED'" type="primary" @click="run(() => issueBorrow(order!.id), '已发放')">确认发放</el-button>
+        <el-button v-if="!isAdmin && order.status === 'BORROWING'" type="primary" @click="run(() => requestReturn(order!.id), '已申请归还')">申请归还</el-button>
         <el-button v-if="isAdmin && (order.status === 'BORROWING' || order.status === 'RETURN_PENDING')" type="primary" @click="confirm">确认归还</el-button>
       </div>
       <el-descriptions :column="2" border>

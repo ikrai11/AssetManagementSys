@@ -21,3 +21,5 @@ ams:
   init:
     admin-password: Admin@123
     user-password: User@123
+  mail:
+    enabled: false

@@ -5,12 +5,15 @@ import com.ikrai.project.common.AuthUser;
 import com.ikrai.project.common.enums.AssetStatus;
 import com.ikrai.project.common.enums.UserRole;
 import com.ikrai.project.common.exception.BusinessException;
+import com.ikrai.project.common.enums.MessageType;
 import com.ikrai.project.dao.AssetCategoryDao;
 import com.ikrai.project.dao.AssetDao;
 import com.ikrai.project.dao.AuditLogDao;
+import com.ikrai.project.dao.SiteMessageDao;
 import com.ikrai.project.dao.SysUserDao;
 import com.ikrai.project.dataobject.AssetDO;
 import com.ikrai.project.dataobject.AuditLogDO;
+import com.ikrai.project.dataobject.SiteMessageDO;
 import com.ikrai.project.dataobject.SysUserDO;
 import com.ikrai.project.dto.AssetSaveDTO;
 import com.ikrai.project.excel.AssetExportRow;
@@ -59,6 +62,8 @@ class AssetExcelServiceTest {
     @Autowired
     private AuditLogDao auditLogDao;
     @Autowired
+    private SiteMessageDao siteMessageDao;
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private AuthUser admin;
@@ -86,6 +91,11 @@ class AssetExcelServiceTest {
         assertTrue(auditLogDao.selectCount(com.baomidou.mybatisplus.core.toolkit.Wrappers.<AuditLogDO>lambdaQuery()
                 .eq(AuditLogDO::getAction, "IMPORT")
                 .eq(AuditLogDO::getOperatorId, admin.getUserId())) >= 1);
+        List<SiteMessageDO> notices = siteMessageDao.selectList(com.baomidou.mybatisplus.core.toolkit.Wrappers.<SiteMessageDO>lambdaQuery()
+                .eq(SiteMessageDO::getReceiverId, admin.getUserId())
+                .eq(SiteMessageDO::getMsgType, MessageType.IMPORT_RESULT.name()));
+        assertEquals(1, notices.size());
+        assertTrue(notices.get(0).getContent().contains("成功 1"));
     }
 
     @Test
