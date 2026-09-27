@@ -3,6 +3,7 @@ package com.ikrai.project.manager.mail.impl;
 import cn.hutool.core.util.StrUtil;
 import com.ikrai.project.common.enums.MailStatus;
 import com.ikrai.project.config.AmsProperties;
+import com.ikrai.project.service.system.SysParamService;
 import com.ikrai.project.dao.MailRecordDao;
 import com.ikrai.project.dataobject.MailRecordDO;
 import org.slf4j.Logger;
@@ -19,24 +20,29 @@ import java.time.LocalDateTime;
 public class MailDispatcher {
 
     static final String CHANNEL_CLOSED = "邮件通道未配置";
+    static final String CHANNEL_DISABLED = "邮件通道已关闭";
     static final String EMPTY_EMAIL = "收件人邮箱为空";
 
     private static final Logger log = LoggerFactory.getLogger(MailDispatcher.class);
 
     private final MailRecordDao mailRecordDao;
     private final AmsProperties amsProperties;
+    private final SysParamService sysParamService;
     private final ObjectProvider<JavaMailSender> mailSender;
 
     public MailDispatcher(MailRecordDao mailRecordDao,
                           AmsProperties amsProperties,
+                          SysParamService sysParamService,
                           ObjectProvider<JavaMailSender> mailSender) {
         this.mailRecordDao = mailRecordDao;
         this.amsProperties = amsProperties;
+        this.sysParamService = sysParamService;
         this.mailSender = mailSender;
     }
 
     public boolean configured() {
-        return amsProperties.getMail().isEnabled()
+        return sysParamService.mailChannelEnabled()
+                && amsProperties.getMail().isEnabled()
                 && StrUtil.isNotBlank(amsProperties.getMail().getFrom())
                 && mailSender.getIfAvailable() != null;
     }
@@ -50,13 +56,24 @@ public class MailDispatcher {
             return;
         }
         record.setEmail(email.trim());
-        if (!configured()) {
+        if (!sysParamService.mailChannelEnabled()) {
+            record.setStatus(MailStatus.SKIPPED.name());
+            record.setFailReason(CHANNEL_DISABLED);
+            return;
+        }
+        if (!smtpReady()) {
             record.setStatus(MailStatus.SKIPPED.name());
             record.setFailReason(CHANNEL_CLOSED);
             return;
         }
         record.setStatus(MailStatus.PENDING.name());
         record.setFailReason(null);
+    }
+
+    private boolean smtpReady() {
+        return amsProperties.getMail().isEnabled()
+                && StrUtil.isNotBlank(amsProperties.getMail().getFrom())
+                && mailSender.getIfAvailable() != null;
     }
 
     public void deliver(MailRecordDO record) {

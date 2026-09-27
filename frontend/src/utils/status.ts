@@ -23,4 +23,7 @@ export const actionLabel: Record<string, string> = {
   ISSUE: '确认发放',
   REQUEST_RETURN: '申请归还',
   CONFIRM_RETURN: '归还确认',
+  RENEW_APPLY: '申请续借',
+  RENEW_APPROVE: '续借通过',
+  RENEW_REJECT: '续借驳回',
 }

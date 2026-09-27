@@ -7,5 +7,8 @@ public enum BorrowLogAction {
     REJECT,
     ISSUE,
     REQUEST_RETURN,
-    CONFIRM_RETURN
+    CONFIRM_RETURN,
+    RENEW_APPLY,
+    RENEW_APPROVE,
+    RENEW_REJECT
 }

@@ -67,4 +67,15 @@ public interface AssetDao extends BaseMapper<AssetDO> {
                   @Param("version") Integer version,
                   @Param("oldStatus") String oldStatus,
                   @Param("newStatus") String newStatus);
+
+    @Update("""
+            UPDATE asset
+            SET expected_return_date = #{expectedReturnDate},
+                version = version + 1
+            WHERE id = #{id} AND version = #{version} AND status = #{status}
+            """)
+    int casUpdateExpectedReturn(@Param("id") Long id,
+                                @Param("version") Integer version,
+                                @Param("status") String status,
+                                @Param("expectedReturnDate") LocalDate expectedReturnDate);
 }

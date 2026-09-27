@@ -15,4 +15,6 @@ public interface AssetManager {
     void issue(AssetDO asset, Long holderUserId, LocalDate borrowStartDate, LocalDate expectedReturnDate);
 
     void confirmReturn(AssetDO asset);
+
+    void updateExpectedReturn(AssetDO asset, LocalDate expectedReturnDate);
 }

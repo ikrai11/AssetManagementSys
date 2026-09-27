@@ -7,6 +7,8 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
+import java.time.LocalDate;
+
 @Mapper
 public interface BorrowOrderDao extends BaseMapper<BorrowOrderDO> {
 
@@ -23,4 +25,15 @@ public interface BorrowOrderDao extends BaseMapper<BorrowOrderDO> {
                         @Param("version") Integer version,
                         @Param("oldStatus") String oldStatus,
                         @Param("newStatus") String newStatus);
+
+    @Update("""
+            UPDATE borrow_order
+            SET expected_return_date = #{expectedReturnDate},
+                version = version + 1
+            WHERE id = #{id} AND version = #{version} AND status = #{status}
+            """)
+    int casUpdateExpectedReturn(@Param("id") Long id,
+                                @Param("version") Integer version,
+                                @Param("status") String status,
+                                @Param("expectedReturnDate") LocalDate expectedReturnDate);
 }

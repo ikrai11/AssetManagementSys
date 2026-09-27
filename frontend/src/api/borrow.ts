@@ -1,5 +1,5 @@
 import http from './http'
-import type { BorrowOrder, BorrowTodos, PageResult, Result } from '@/types/api'
+import type { BorrowOrder, BorrowRenew, BorrowTodos, PageResult, Result } from '@/types/api'
 
 export function createBorrow(payload: {
   assetId: number
@@ -41,6 +41,18 @@ export function rejectBorrow(id: number, comment: string) {
 
 export function issueBorrow(id: number) {
   return http.post<Result<BorrowOrder>>(`/borrows/${id}/issue`)
+}
+
+export function applyRenew(id: number, payload: { newReturnDate: string; reason: string }) {
+  return http.post<Result<BorrowRenew>>(`/borrows/${id}/renew`, payload)
+}
+
+export function approveRenew(renewId: number) {
+  return http.post<Result<BorrowRenew>>(`/borrows/renews/${renewId}/approve`)
+}
+
+export function rejectRenew(renewId: number, comment: string) {
+  return http.post<Result<BorrowRenew>>(`/borrows/renews/${renewId}/reject`, { comment })
 }
 
 export function requestReturn(id: number) {

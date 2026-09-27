@@ -90,6 +90,12 @@ const router = createRouter({
           meta: { role: 'ADMIN', title: '用户管理' },
         },
         {
+          path: 'system-params',
+          name: 'system-params',
+          component: () => import('@/views/system/SystemParamView.vue'),
+          meta: { role: 'ADMIN', title: '系统参数' },
+        },
+        {
           path: 'mail-records',
           name: 'mail-records',
           component: () => import('@/views/system/MailRecordView.vue'),

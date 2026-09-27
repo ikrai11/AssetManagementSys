@@ -1,6 +1,8 @@
 package com.ikrai.project.manager.user;
 
 import com.ikrai.project.common.exception.BusinessException;
+import com.ikrai.project.service.system.SysParamService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -11,10 +13,20 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class LoginLockManager {
 
-    private static final int MAX_FAILURES = 5;
-    private static final Duration LOCK_DURATION = Duration.ofMinutes(15);
+    private static final int DEFAULT_MAX_FAILURES = 5;
+    private static final int DEFAULT_LOCK_MINUTES = 15;
 
+    private final SysParamService sysParamService;
     private final Map<String, Attempt> attempts = new ConcurrentHashMap<>();
+
+    public LoginLockManager() {
+        this.sysParamService = null;
+    }
+
+    @Autowired
+    public LoginLockManager(SysParamService sysParamService) {
+        this.sysParamService = sysParamService;
+    }
 
     public void assertUnlocked(String username) {
         Attempt attempt = attempts.get(username);
@@ -31,9 +43,17 @@ public class LoginLockManager {
     public void recordFailure(String username) {
         Attempt attempt = attempts.computeIfAbsent(username, key -> new Attempt());
         attempt.failures += 1;
-        if (attempt.failures >= MAX_FAILURES) {
-            attempt.lockedUntil = Instant.now().plus(LOCK_DURATION);
+        if (attempt.failures >= maxFailures()) {
+            attempt.lockedUntil = Instant.now().plus(Duration.ofMinutes(lockMinutes()));
         }
+    }
+
+    private int maxFailures() {
+        return sysParamService == null ? DEFAULT_MAX_FAILURES : sysParamService.loginMaxFailures();
+    }
+
+    private int lockMinutes() {
+        return sysParamService == null ? DEFAULT_LOCK_MINUTES : sysParamService.loginLockMinutes();
     }
 
     public void clear(String username) {

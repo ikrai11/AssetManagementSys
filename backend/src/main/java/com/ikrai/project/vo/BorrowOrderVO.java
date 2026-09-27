@@ -31,5 +31,8 @@ public class BorrowOrderVO {
     private String returnComment;
     private Integer version;
     private LocalDateTime createdAt;
+    private Long pendingRenewId;
+    private LocalDate pendingRenewDate;
+    private String pendingRenewReason;
     private List<BorrowLogVO> logs;
 }

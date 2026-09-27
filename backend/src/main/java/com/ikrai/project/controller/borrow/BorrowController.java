@@ -4,10 +4,12 @@ import com.ikrai.project.common.result.Result;
 import com.ikrai.project.config.SecurityUsers;
 import com.ikrai.project.dto.BorrowCreateDTO;
 import com.ikrai.project.dto.RejectDTO;
+import com.ikrai.project.dto.RenewApplyDTO;
 import com.ikrai.project.dto.ReturnConfirmDTO;
 import com.ikrai.project.query.BorrowQuery;
 import com.ikrai.project.service.borrow.BorrowService;
 import com.ikrai.project.vo.BorrowOrderVO;
+import com.ikrai.project.vo.BorrowRenewVO;
 import com.ikrai.project.vo.BorrowTodoVO;
 import com.ikrai.project.vo.PageVO;
 import jakarta.validation.Valid;
@@ -77,6 +79,24 @@ public class BorrowController {
     @PreAuthorize("hasRole('ADMIN')")
     public Result<BorrowOrderVO> issue(@PathVariable Long id) {
         return Result.ok(borrowService.issue(SecurityUsers.current(), id));
+    }
+
+    @PostMapping("/{id}/renew")
+    public Result<BorrowRenewVO> applyRenew(@PathVariable Long id, @Valid @RequestBody RenewApplyDTO dto) {
+        return Result.ok(borrowService.applyRenew(SecurityUsers.current(), id, dto));
+    }
+
+    @PostMapping("/renews/{renewId}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<BorrowRenewVO> approveRenew(@PathVariable Long renewId) {
+        return Result.ok(borrowService.approveRenew(SecurityUsers.current(), renewId));
+    }
+
+    @PostMapping("/renews/{renewId}/reject")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<BorrowRenewVO> rejectRenew(@PathVariable Long renewId, @RequestBody(required = false) RejectDTO dto) {
+        String comment = dto == null ? null : dto.getComment();
+        return Result.ok(borrowService.rejectRenew(SecurityUsers.current(), renewId, comment));
     }
 
     @PostMapping("/{id}/return-request")

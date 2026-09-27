@@ -2,8 +2,10 @@ package com.ikrai.project.service.borrow;
 
 import com.ikrai.project.common.AuthUser;
 import com.ikrai.project.dto.BorrowCreateDTO;
+import com.ikrai.project.dto.RenewApplyDTO;
 import com.ikrai.project.query.BorrowQuery;
 import com.ikrai.project.vo.BorrowOrderVO;
+import com.ikrai.project.vo.BorrowRenewVO;
 import com.ikrai.project.vo.BorrowTodoVO;
 import com.ikrai.project.vo.PageVO;
 
@@ -24,6 +26,12 @@ public interface BorrowService {
     BorrowOrderVO requestReturn(AuthUser applicant, Long orderId);
 
     BorrowOrderVO confirmReturn(AuthUser admin, Long orderId, String comment);
+
+    BorrowRenewVO applyRenew(AuthUser applicant, Long orderId, RenewApplyDTO dto);
+
+    BorrowRenewVO approveRenew(AuthUser admin, Long renewId);
+
+    BorrowRenewVO rejectRenew(AuthUser admin, Long renewId, String comment);
 
     BorrowOrderVO get(AuthUser viewer, Long orderId);
 

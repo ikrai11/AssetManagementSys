@@ -10,4 +10,5 @@ public class BorrowTodoVO {
     private List<BorrowOrderVO> pending;
     private List<BorrowOrderVO> approved;
     private List<BorrowOrderVO> returnPending;
+    private List<BorrowRenewVO> renewPending;
 }

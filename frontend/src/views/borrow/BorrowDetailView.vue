@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { approveBorrow, confirmReturn, getBorrow, issueBorrow, rejectBorrow, requestReturn, submitBorrow, withdrawBorrow } from '@/api/borrow'
+import { applyRenew, approveBorrow, approveRenew, confirmReturn, getBorrow, issueBorrow, rejectBorrow, rejectRenew, requestReturn, submitBorrow, withdrawBorrow } from '@/api/borrow'
 import { useAuthStore } from '@/stores/auth'
 import { actionLabel, borrowTagType } from '@/utils/status'
 import type { BorrowOrder } from '@/types/api'
@@ -11,7 +11,11 @@ const route = useRoute()
 const auth = useAuthStore()
 const loading = ref(false)
 const order = ref<BorrowOrder>()
+const renewOpen = ref(false)
+const renewDate = ref('')
+const renewReason = ref('')
 const isAdmin = computed(() => auth.role === 'ADMIN')
+const canRenew = computed(() => !isAdmin.value && order.value?.status === 'BORROWING' && !order.value.pendingRenewId)
 
 async function load() {
   loading.value = true
@@ -44,6 +48,35 @@ async function confirm() {
   await run(() => confirmReturn(order.value!.id, value), '已归还')
 }
 
+function openRenew() {
+  renewDate.value = ''
+  renewReason.value = ''
+  renewOpen.value = true
+}
+
+async function submitRenew() {
+  if (!order.value || !renewDate.value || !renewReason.value.trim()) {
+    ElMessage.warning('请填写新预计归还日和理由')
+    return
+  }
+  await run(() => applyRenew(order.value!.id, { newReturnDate: renewDate.value, reason: renewReason.value.trim() }), '已提交续借')
+  renewOpen.value = false
+}
+
+async function passRenew() {
+  if (!order.value?.pendingRenewId) return
+  await run(() => approveRenew(order.value!.pendingRenewId!), '续借已通过')
+}
+
+async function denyRenew() {
+  if (!order.value?.pendingRenewId) return
+  const { value } = await ElMessageBox.prompt('请填写驳回原因', '驳回续借', {
+    inputPattern: /\S+/,
+    inputErrorMessage: '驳回必须填写原因',
+  })
+  await run(() => rejectRenew(order.value!.pendingRenewId!, value), '已驳回续借')
+}
+
 onMounted(load)
 </script>
 
@@ -66,13 +99,19 @@ onMounted(load)
         <el-button v-if="isAdmin && order.status === 'PENDING'" type="primary" @click="run(() => approveBorrow(order!.id), '已通过')">通过</el-button>
         <el-button v-if="isAdmin && order.status === 'PENDING'" type="danger" @click="reject">驳回</el-button>
         <el-button v-if="isAdmin && order.status === 'APPROVED'" type="primary" @click="run(() => issueBorrow(order!.id), '已发放')">确认发放</el-button>
-        <el-button v-if="!isAdmin && order.status === 'BORROWING'" type="primary" @click="run(() => requestReturn(order!.id), '已申请归还')">申请归还</el-button>
-        <el-button v-if="isAdmin && (order.status === 'BORROWING' || order.status === 'RETURN_PENDING')" type="primary" @click="confirm">确认归还</el-button>
+        <el-button v-if="canRenew" type="primary" @click="openRenew">申请续借</el-button>
+        <el-button v-if="!isAdmin && order.status === 'BORROWING' && !order.pendingRenewId" @click="run(() => requestReturn(order!.id), '已申请归还')">申请归还</el-button>
+        <el-button v-if="isAdmin && order.pendingRenewId" type="primary" @click="passRenew">通过续借</el-button>
+        <el-button v-if="isAdmin && order.pendingRenewId" type="danger" @click="denyRenew">驳回续借</el-button>
+        <el-button v-if="isAdmin && !order.pendingRenewId && (order.status === 'BORROWING' || order.status === 'RETURN_PENDING')" type="primary" @click="confirm">确认归还</el-button>
       </div>
       <el-descriptions :column="2" border>
         <el-descriptions-item label="申请人">{{ order.applicantName }}</el-descriptions-item>
         <el-descriptions-item label="用途">{{ order.purpose }}</el-descriptions-item>
         <el-descriptions-item label="预计归还日">{{ order.expectedReturnDate }}</el-descriptions-item>
+        <el-descriptions-item v-if="order.pendingRenewId" label="待审批续借">
+          {{ order.pendingRenewDate }}，{{ order.pendingRenewReason }}
+        </el-descriptions-item>
         <el-descriptions-item label="发放时间">{{ order.issuedAt }}</el-descriptions-item>
         <el-descriptions-item label="驳回原因">{{ order.approveComment }}</el-descriptions-item>
         <el-descriptions-item label="归还说明">{{ order.returnComment }}</el-descriptions-item>
@@ -86,6 +125,20 @@ onMounted(load)
         </el-timeline-item>
       </el-timeline>
     </div>
+    <el-dialog v-model="renewOpen" title="申请续借" width="420px">
+      <el-form label-width="110px">
+        <el-form-item label="新预计归还日">
+          <el-date-picker v-model="renewDate" type="date" value-format="YYYY-MM-DD" placeholder="须晚于原日期" />
+        </el-form-item>
+        <el-form-item label="理由">
+          <el-input v-model="renewReason" type="textarea" maxlength="500" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="renewOpen = false">取消</el-button>
+        <el-button type="primary" @click="submitRenew">提交</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 

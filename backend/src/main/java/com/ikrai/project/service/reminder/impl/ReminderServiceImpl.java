@@ -16,6 +16,7 @@ import com.ikrai.project.dataobject.SysUserDO;
 import com.ikrai.project.manager.mail.MailManager;
 import com.ikrai.project.manager.message.MessageManager;
 import com.ikrai.project.service.reminder.ReminderService;
+import com.ikrai.project.service.system.SysParamService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,8 +25,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class ReminderServiceImpl implements ReminderService {
@@ -36,19 +39,22 @@ public class ReminderServiceImpl implements ReminderService {
     private final SysUserDao sysUserDao;
     private final MessageManager messageManager;
     private final MailManager mailManager;
+    private final SysParamService sysParamService;
 
     public ReminderServiceImpl(BorrowOrderDao borrowOrderDao,
                                ReminderMarkDao reminderMarkDao,
                                AssetDao assetDao,
                                SysUserDao sysUserDao,
                                MessageManager messageManager,
-                               MailManager mailManager) {
+                               MailManager mailManager,
+                               SysParamService sysParamService) {
         this.borrowOrderDao = borrowOrderDao;
         this.reminderMarkDao = reminderMarkDao;
         this.assetDao = assetDao;
         this.sysUserDao = sysUserDao;
         this.messageManager = messageManager;
         this.mailManager = mailManager;
+        this.sysParamService = sysParamService;
     }
 
     @Override
@@ -61,9 +67,10 @@ public class ReminderServiceImpl implements ReminderService {
         for (RemindType type : RemindType.values()) {
             groups.put(type, new ArrayList<>());
         }
+        Set<Integer> leadDays = new HashSet<>(sysParamService.remindLeadDays());
         for (BorrowOrderDO order : orders) {
             long days = ChronoUnit.DAYS.between(today, order.getExpectedReturnDate());
-            if (days == 7 || days == 3 || days == 1) {
+            if (leadDays.contains((int) days)) {
                 groups.get(RemindType.DUE_SOON).add(order);
             } else if (days == 0) {
                 groups.get(RemindType.DUE_TODAY).add(order);

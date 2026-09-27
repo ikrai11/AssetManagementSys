@@ -2,15 +2,18 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { approveBorrow, confirmReturn, issueBorrow, listTodos, rejectBorrow } from '@/api/borrow'
+import { approveBorrow, approveRenew, confirmReturn, issueBorrow, listTodos, rejectBorrow, rejectRenew } from '@/api/borrow'
 import { borrowTagType } from '@/utils/status'
-import type { BorrowOrder, BorrowTodos } from '@/types/api'
+import type { BorrowOrder, BorrowRenew, BorrowTodos } from '@/types/api'
 
 const router = useRouter()
 const loading = ref(false)
 const tab = ref('pending')
-const todos = ref<BorrowTodos>({ pending: [], approved: [], returnPending: [] })
-const current = computed(() => todos.value[tab.value as keyof BorrowTodos] ?? [])
+const todos = ref<BorrowTodos>({ pending: [], approved: [], returnPending: [], renewPending: [] })
+const current = computed(() => {
+  if (tab.value === 'renew') return []
+  return todos.value[tab.value as 'pending' | 'approved' | 'returnPending'] ?? []
+})
 
 async function load() {
   loading.value = true
@@ -54,6 +57,22 @@ async function confirm(row: BorrowOrder) {
   await load()
 }
 
+async function passRenew(row: BorrowRenew) {
+  await approveRenew(row.id)
+  ElMessage.success('续借已通过，预计归还日已更新')
+  await load()
+}
+
+async function denyRenew(row: BorrowRenew) {
+  const { value } = await ElMessageBox.prompt('请填写驳回原因', '驳回续借', {
+    inputPattern: /\S+/,
+    inputErrorMessage: '驳回必须填写原因',
+  })
+  await rejectRenew(row.id, value)
+  ElMessage.success('已驳回，原预计归还日不变')
+  await load()
+}
+
 onMounted(load)
 </script>
 
@@ -64,8 +83,25 @@ onMounted(load)
         <el-tab-pane :label="`待审批 (${todos.pending.length})`" name="pending" />
         <el-tab-pane :label="`待发放 (${todos.approved.length})`" name="approved" />
         <el-tab-pane :label="`待归还 (${todos.returnPending.length})`" name="returnPending" />
+        <el-tab-pane :label="`待续借 (${todos.renewPending.length})`" name="renew" />
       </el-tabs>
-      <el-table :data="current" stripe>
+      <el-table v-if="tab === 'renew'" :data="todos.renewPending" stripe>
+        <el-table-column prop="orderNo" label="单号" min-width="140" show-overflow-tooltip />
+        <el-table-column prop="applicantName" label="申请人" width="88" />
+        <el-table-column prop="assetNo" label="资产编号" min-width="110" show-overflow-tooltip />
+        <el-table-column prop="assetName" label="设备" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="oldReturnDate" label="原归还日" width="112" />
+        <el-table-column prop="newReturnDate" label="新归还日" width="112" />
+        <el-table-column prop="reason" label="理由" min-width="140" show-overflow-tooltip />
+        <el-table-column label="操作" width="200" align="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="router.push({ name: 'borrow-detail', params: { id: row.borrowId } })">详情</el-button>
+            <el-button link type="success" @click="passRenew(row)">通过</el-button>
+            <el-button link type="danger" @click="denyRenew(row)">驳回</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-table v-else :data="current" stripe>
         <el-table-column prop="orderNo" label="单号" min-width="140" show-overflow-tooltip />
         <el-table-column prop="applicantName" label="申请人" width="88" />
         <el-table-column prop="assetNo" label="资产编号" min-width="110" show-overflow-tooltip />

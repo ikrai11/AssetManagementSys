@@ -83,4 +83,17 @@ public class AssetManagerImpl implements AssetManager {
             throw new ConflictException();
         }
     }
+
+    @Override
+    public void updateExpectedReturn(AssetDO asset, LocalDate expectedReturnDate) {
+        int rows = assetDao.casUpdateExpectedReturn(
+                asset.getId(),
+                asset.getVersion(),
+                AssetStatus.BORROWED.name(),
+                expectedReturnDate
+        );
+        if (rows == 0) {
+            throw new ConflictException();
+        }
+    }
 }

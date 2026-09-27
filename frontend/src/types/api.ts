@@ -150,13 +150,41 @@ export interface BorrowOrder {
   returnedAt?: string
   returnComment?: string
   createdAt?: string
+  pendingRenewId?: number
+  pendingRenewDate?: string
+  pendingRenewReason?: string
   logs?: BorrowLog[]
+}
+
+export interface BorrowRenew {
+  id: number
+  borrowId: number
+  orderNo?: string
+  assetNo?: string
+  assetName?: string
+  applicantName?: string
+  oldReturnDate?: string
+  newReturnDate?: string
+  reason?: string
+  status: string
+  statusLabel?: string
+  approveComment?: string
 }
 
 export interface BorrowTodos {
   pending: BorrowOrder[]
   approved: BorrowOrder[]
   returnPending: BorrowOrder[]
+  renewPending: BorrowRenew[]
+}
+
+export interface SysParams {
+  remindLeadDays: string
+  borrowMaxDays: number
+  renewMaxDaysFromIssue: number
+  mailChannelEnabled: boolean
+  loginMaxFailures: number
+  loginLockMinutes: number
 }
 
 export interface AssetImportFail {
