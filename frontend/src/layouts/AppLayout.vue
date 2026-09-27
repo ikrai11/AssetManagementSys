@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Box, Lock, Notebook, SwitchButton, Tickets } from '@element-plus/icons-vue'
+import { Box, Lock, Notebook, SwitchButton, Tickets, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -14,6 +14,7 @@ const menus = computed(() => {
       { path: '/assets', title: '设备台账', icon: Box },
       { path: '/borrows/todos', title: '领用办理', icon: Tickets },
       { path: '/borrows/mine', title: '我的领用', icon: Notebook },
+      { path: '/users', title: '用户管理', icon: User },
       { path: '/password', title: '修改密码', icon: Lock },
     ]
   }
@@ -25,6 +26,12 @@ const menus = computed(() => {
 })
 
 const roleLabel = computed(() => (auth.role === 'ADMIN' ? '系统管理员' : '普通用户'))
+
+onMounted(() => {
+  if (auth.loggedIn && !auth.userId) {
+    auth.fetchMe()
+  }
+})
 const pageTitle = computed(() => (typeof route.meta.title === 'string' ? route.meta.title : '资产管理系统'))
 
 async function logout() {

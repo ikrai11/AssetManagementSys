@@ -26,11 +26,50 @@ const query = reactive({
   statuses: [] as string[],
   deptId: undefined as number | undefined,
   locationId: undefined as number | undefined,
+  borrowRange: null as [string, string] | null,
+  dueRange: null as [string, string] | null,
   page: 1,
   pageSize: 20,
 })
 
 const isAdmin = computed(() => auth.role === 'ADMIN')
+
+function queryText(value: unknown) {
+  return typeof value === 'string' ? value : ''
+}
+
+function queryNumber(value: unknown) {
+  const text = queryText(value)
+  return text ? Number(text) : undefined
+}
+
+function queryNumbers(value: unknown) {
+  return queryText(value)
+    .split(',')
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item) && item > 0)
+}
+
+function queryList(value: unknown) {
+  return queryText(value).split(',').filter(Boolean)
+}
+
+function applyRouteQuery() {
+  query.keyword = queryText(route.query.keyword)
+  query.categoryIds = queryNumbers(route.query.categoryIds)
+  query.statuses = queryList(route.query.statuses)
+  query.deptId = queryNumber(route.query.deptId)
+  query.locationId = queryNumber(route.query.locationId)
+  const borrowFrom = queryText(route.query.borrowStartFrom)
+  const borrowTo = queryText(route.query.borrowStartTo)
+  query.borrowRange = borrowFrom && borrowTo ? [borrowFrom, borrowTo] : null
+  const dueFrom = queryText(route.query.dueFrom)
+  const dueTo = queryText(route.query.dueTo)
+  query.dueRange = dueFrom && dueTo ? [dueFrom, dueTo] : null
+  query.page = Number(route.query.page || 1)
+  query.pageSize = Number(route.query.pageSize || 20)
+  moreFilters.value = Boolean(query.deptId || query.locationId || query.borrowRange || query.dueRange)
+}
 
 async function loadDicts() {
   const [c, d, l] = await Promise.all([listCategories(), listDepts(), listLocations()])
@@ -48,12 +87,30 @@ async function load() {
       statuses: query.statuses.length ? query.statuses : undefined,
       deptId: query.deptId,
       locationId: query.locationId,
+      borrowStartFrom: query.borrowRange?.[0],
+      borrowStartTo: query.borrowRange?.[1],
+      dueFrom: query.dueRange?.[0],
+      dueTo: query.dueRange?.[1],
       page: query.page,
       pageSize: query.pageSize,
     })
     list.value = data.data.list
     total.value = data.data.total
-    await router.replace({ query: { ...route.query, keyword: query.keyword || undefined, page: String(query.page) } })
+    await router.replace({
+      query: {
+        keyword: query.keyword || undefined,
+        categoryIds: query.categoryIds.length ? query.categoryIds.join(',') : undefined,
+        statuses: query.statuses.length ? query.statuses.join(',') : undefined,
+        deptId: query.deptId ? String(query.deptId) : undefined,
+        locationId: query.locationId ? String(query.locationId) : undefined,
+        borrowStartFrom: query.borrowRange?.[0],
+        borrowStartTo: query.borrowRange?.[1],
+        dueFrom: query.dueRange?.[0],
+        dueTo: query.dueRange?.[1],
+        page: String(query.page),
+        pageSize: String(query.pageSize),
+      },
+    })
   } finally {
     loading.value = false
   }
@@ -70,7 +127,10 @@ function reset() {
   query.statuses = []
   query.deptId = undefined
   query.locationId = undefined
+  query.borrowRange = null
+  query.dueRange = null
   query.page = 1
+  query.pageSize = 20
   load()
 }
 
@@ -84,8 +144,7 @@ async function remove(row: AssetItem) {
 }
 
 onMounted(async () => {
-  query.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : ''
-  query.page = Number(route.query.page || 1)
+  applyRouteQuery()
   await loadDicts()
   await load()
 })
@@ -123,6 +182,26 @@ watch(() => [query.page, query.pageSize], () => load())
             <el-select v-model="query.locationId" clearable placeholder="全部">
               <el-option v-for="item in locations" :key="item.id" :label="item.name" :value="item.id" />
             </el-select>
+          </el-form-item>
+          <el-form-item label="领用时间">
+            <el-date-picker
+              v-model="query.borrowRange"
+              type="daterange"
+              value-format="YYYY-MM-DD"
+              start-placeholder="开始日"
+              end-placeholder="结束日"
+              clearable
+            />
+          </el-form-item>
+          <el-form-item label="预计归还">
+            <el-date-picker
+              v-model="query.dueRange"
+              type="daterange"
+              value-format="YYYY-MM-DD"
+              start-placeholder="开始日"
+              end-placeholder="结束日"
+              clearable
+            />
           </el-form-item>
         </template>
         <el-form-item>

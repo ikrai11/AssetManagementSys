@@ -144,6 +144,48 @@ class BorrowServiceTest {
         assertEquals(AssetStatus.PENDING.name(), assetDao.selectById(asset.getId()).getStatus());
     }
 
+    @Test
+    void withdrawPendingPutsAssetInStockAndAllowsApplyAgain() {
+        AssetVO asset = createAsset("NB-WD");
+        BorrowOrderVO order = borrowService.save(user, submitDto(asset.getId()));
+
+        BorrowOrderVO withdrawn = borrowService.withdraw(user, order.getId());
+        assertEquals(BorrowOrderStatus.WITHDRAWN.name(), withdrawn.getStatus());
+        assertEquals(AssetStatus.IN_STOCK.name(), assetDao.selectById(asset.getId()).getStatus());
+
+        BorrowOrderVO again = borrowService.save(user, submitDto(asset.getId()));
+        assertEquals(BorrowOrderStatus.PENDING.name(), again.getStatus());
+        assertEquals(AssetStatus.PENDING.name(), assetDao.selectById(asset.getId()).getStatus());
+    }
+
+    @Test
+    void withdrawAfterApproveReturnsConflictAndKeepsAssetPending() {
+        AssetVO asset = createAsset("NB-WD2");
+        BorrowOrderVO order = borrowService.save(user, submitDto(asset.getId()));
+        borrowService.approve(admin, order.getId());
+
+        ConflictException ex = assertThrows(ConflictException.class,
+                () -> borrowService.withdraw(user, order.getId()));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatus());
+        assertEquals("状态已变化，请刷新", ex.getMessage());
+        assertEquals(BorrowOrderStatus.APPROVED.name(),
+                borrowService.get(admin, order.getId()).getStatus());
+        assertEquals(AssetStatus.PENDING.name(), assetDao.selectById(asset.getId()).getStatus());
+    }
+
+    @Test
+    void applyFailsWhenExpectedReturnExceedsNinetyDays() {
+        AssetVO asset = createAsset("NB-90");
+        BorrowCreateDTO dto = submitDto(asset.getId());
+        dto.setExpectedReturnDate(LocalDate.now().plusDays(91));
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> borrowService.save(user, dto));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("90"));
+        assertEquals(AssetStatus.IN_STOCK.name(), assetDao.selectById(asset.getId()).getStatus());
+    }
+
     private AssetVO createAsset(String assetNo) {
         AssetSaveDTO dto = new AssetSaveDTO();
         dto.setAssetNo(assetNo + "-" + SEQ.getAndIncrement());

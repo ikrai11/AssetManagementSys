@@ -72,6 +72,12 @@ const router = createRouter({
           meta: { title: '领用详情' },
         },
         {
+          path: 'users',
+          name: 'users',
+          component: () => import('@/views/system/UserManageView.vue'),
+          meta: { role: 'ADMIN', title: '用户管理' },
+        },
+        {
           path: 'password',
           name: 'password',
           component: () => import('@/views/user/PasswordView.vue'),

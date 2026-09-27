@@ -5,7 +5,7 @@ import com.ikrai.project.dataobject.BorrowOrderDO;
 
 public interface BorrowManager {
 
-    String nextOrderNo();
+    void insertNew(BorrowOrderDO order);
 
     BorrowOrderDO getById(Long id);
 

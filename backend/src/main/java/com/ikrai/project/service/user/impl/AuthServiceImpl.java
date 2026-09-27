@@ -49,6 +49,7 @@ public class AuthServiceImpl implements AuthService {
         loginLockManager.clear(dto.getUsername());
         AuthUser authUser = new AuthUser(user.getId(), user.getUsername(), user.getRole(), user.getTokenVersion());
         LoginVO vo = new LoginVO();
+        vo.setUserId(user.getId());
         vo.setToken(jwtService.createToken(authUser));
         vo.setRole(user.getRole());
         vo.setRealName(user.getRealName());
@@ -67,7 +68,10 @@ public class AuthServiceImpl implements AuthService {
         vo.setMobile(user.getMobile());
         vo.setDeptId(user.getDeptId());
         vo.setRole(user.getRole());
+        vo.setRoleLabel("ADMIN".equals(user.getRole()) ? "系统管理员" : "普通用户");
+        vo.setEnabled(user.getEnabled() != null && user.getEnabled() == 1);
         vo.setMustChangePassword(user.getMustChangePassword() != null && user.getMustChangePassword() == 1);
+        vo.setCreatedAt(user.getCreatedAt());
         return vo;
     }
 

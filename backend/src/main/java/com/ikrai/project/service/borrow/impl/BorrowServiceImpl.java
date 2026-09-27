@@ -74,7 +74,6 @@ public class BorrowServiceImpl implements BorrowService {
             assertCanSubmit(dto, asset);
         }
         BorrowOrderDO order = new BorrowOrderDO();
-        order.setOrderNo(borrowManager.nextOrderNo());
         order.setAssetId(asset.getId());
         order.setApplicantId(applicant.getUserId());
         order.setPurpose(blankToNull(dto.getPurpose()));
@@ -82,7 +81,7 @@ public class BorrowServiceImpl implements BorrowService {
         order.setRemark(blankToNull(dto.getRemark()));
         order.setStatus(dto.isSubmit() ? BorrowOrderStatus.PENDING.name() : BorrowOrderStatus.DRAFT.name());
         order.setVersion(0);
-        borrowOrderDao.insert(order);
+        borrowManager.insertNew(order);
         if (dto.isSubmit()) {
             assetManager.occupyOnSubmit(asset, order.getId());
             borrowManager.saveLog(order.getId(), BorrowLogAction.SUBMIT, applicant.getUserId(), null);

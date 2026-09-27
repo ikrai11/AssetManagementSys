@@ -58,6 +58,10 @@ a {
   width: 200px;
 }
 
+.search-form .el-date-editor {
+  width: 240px;
+}
+
 .table-panel {
   background: var(--ams-card);
   border-radius: 4px;

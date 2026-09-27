@@ -29,6 +29,8 @@ public class BorrowManagerImpl implements BorrowManager {
 
     private final BorrowOrderDao borrowOrderDao;
     private final BorrowLogDao borrowLogDao;
+    private String orderNoDate;
+    private int orderNoSeq;
 
     public BorrowManagerImpl(BorrowOrderDao borrowOrderDao, BorrowLogDao borrowLogDao) {
         this.borrowOrderDao = borrowOrderDao;
@@ -36,10 +38,15 @@ public class BorrowManagerImpl implements BorrowManager {
     }
 
     @Override
-    public String nextOrderNo() {
+    public synchronized void insertNew(BorrowOrderDO order) {
         String prefix = "LY" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
-        long count = borrowOrderDao.countByOrderNoPrefix(prefix);
-        return prefix + String.format("%04d", count + 1);
+        if (!prefix.equals(orderNoDate)) {
+            orderNoDate = prefix;
+            orderNoSeq = (int) borrowOrderDao.countByOrderNoPrefix(prefix);
+        }
+        orderNoSeq++;
+        order.setOrderNo(prefix + String.format("%04d", orderNoSeq));
+        borrowOrderDao.insert(order);
     }
 
     @Override

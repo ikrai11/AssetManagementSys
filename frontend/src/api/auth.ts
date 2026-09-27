@@ -2,7 +2,7 @@ import http from './http'
 import type { LoginResult, Result, UserProfile } from '@/types/api'
 
 export function login(username: string, password: string) {
-  return http.post<Result<LoginResult>>('/auth/login', { username, password })
+  return http.post<Result<LoginResult>>('/auth/login', { username, password }, { skipErrorMessage: true })
 }
 
 export function logout() {

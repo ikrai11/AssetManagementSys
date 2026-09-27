@@ -94,7 +94,7 @@ onMounted(load)
 <template>
   <div class="page" v-loading="loading">
     <div class="form-panel">
-      <el-page-header :content="editing ? '编辑设备' : '新建设备'" @back="router.push({ name: 'assets' })" />
+      <el-page-header :content="editing ? '编辑设备' : '新建设备'" @back="router.back()" />
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px" class="asset-form">
         <h3>基本信息</h3>
         <el-row :gutter="24">
@@ -178,7 +178,7 @@ onMounted(load)
         </el-row>
         <el-form-item>
           <el-button type="primary" :loading="saving" @click="submit">保存</el-button>
-          <el-button @click="router.push({ name: 'assets' })">取消</el-button>
+          <el-button @click="router.back()">取消</el-button>
         </el-form-item>
       </el-form>
     </div>

@@ -29,7 +29,7 @@ onMounted(load)
 <template>
   <div class="page" v-loading="loading">
     <div class="form-panel" v-if="asset">
-      <el-page-header content="设备详情" @back="router.push({ name: 'assets' })" />
+      <el-page-header content="设备详情" @back="router.back()" />
       <div class="detail-head">
         <div>
           <h2>{{ asset.name }}</h2>

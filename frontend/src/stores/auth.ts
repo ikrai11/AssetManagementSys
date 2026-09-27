@@ -5,6 +5,7 @@ import { changePassword as changePasswordApi, getMe, login as loginApi, logout a
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') ?? '')
+  const userId = ref(Number(localStorage.getItem('userId') || 0))
   const role = ref<UserRole | ''>((localStorage.getItem('role') as UserRole) || '')
   const realName = ref(localStorage.getItem('realName') ?? '')
   const mustChangePassword = ref(localStorage.getItem('mustChangePassword') === '1')
@@ -13,6 +14,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   function persist() {
     localStorage.setItem('token', token.value)
+    localStorage.setItem('userId', userId.value ? String(userId.value) : '')
     localStorage.setItem('role', role.value)
     localStorage.setItem('realName', realName.value)
     localStorage.setItem('mustChangePassword', mustChangePassword.value ? '1' : '0')
@@ -21,6 +23,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(username: string, password: string) {
     const { data } = await loginApi(username, password)
     token.value = data.data.token
+    userId.value = data.data.userId
     role.value = data.data.role
     realName.value = data.data.realName
     mustChangePassword.value = data.data.mustChangePassword
@@ -29,6 +32,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchMe() {
     const { data } = await getMe()
+    userId.value = data.data.id
     role.value = data.data.role
     realName.value = data.data.realName
     mustChangePassword.value = data.data.mustChangePassword
@@ -53,10 +57,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   function clear() {
     token.value = ''
+    userId.value = 0
     role.value = ''
     realName.value = ''
     mustChangePassword.value = false
     localStorage.removeItem('token')
+    localStorage.removeItem('userId')
     localStorage.removeItem('role')
     localStorage.removeItem('realName')
     localStorage.removeItem('mustChangePassword')
@@ -64,6 +70,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     token,
+    userId,
     role,
     realName,
     mustChangePassword,

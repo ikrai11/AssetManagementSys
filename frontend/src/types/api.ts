@@ -17,6 +17,7 @@ export interface DictItem {
 }
 
 export interface LoginResult {
+  userId: number
   token: string
   role: 'ADMIN' | 'USER'
   realName: string
@@ -30,8 +31,36 @@ export interface UserProfile {
   email?: string
   mobile?: string
   deptId?: number
+  deptName?: string
   role: 'ADMIN' | 'USER'
+  roleLabel?: string
+  enabled?: boolean
   mustChangePassword: boolean
+  createdAt?: string
+}
+
+export interface UserAccount extends UserProfile {
+  enabled: boolean
+}
+
+export interface UserQuery {
+  keyword?: string
+  role?: string
+  deptId?: number
+  enabled?: boolean
+  page?: number
+  pageSize?: number
+}
+
+export interface UserSavePayload {
+  username?: string
+  realName: string
+  email?: string
+  mobile?: string
+  deptId?: number
+  role: 'ADMIN' | 'USER'
+  password?: string
+  enabled?: boolean
 }
 
 export interface AssetItem {

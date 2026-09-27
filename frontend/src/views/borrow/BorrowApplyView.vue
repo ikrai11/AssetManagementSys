@@ -76,7 +76,7 @@ onMounted(load)
 <template>
   <div class="page" v-loading="loading">
     <div class="form-panel">
-      <el-page-header content="申请领用" @back="router.push({ name: 'assets' })" />
+      <el-page-header content="申请领用" @back="router.back()" />
       <p v-if="asset" class="asset-line">设备：{{ asset.assetNo }} {{ asset.name }}（当前 {{ asset.statusLabel }}）</p>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px" style="max-width: 560px">
         <el-form-item label="用途" prop="purpose">

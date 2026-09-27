@@ -2,6 +2,7 @@ package com.ikrai.project.service.asset;
 
 import com.ikrai.project.common.AuthUser;
 import com.ikrai.project.common.enums.UserRole;
+import com.ikrai.project.common.exception.BusinessException;
 import com.ikrai.project.common.exception.NotFoundException;
 import com.ikrai.project.dao.AssetCategoryDao;
 import com.ikrai.project.dao.SysUserDao;
@@ -29,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -105,6 +107,39 @@ class AssetServiceTest {
         NotFoundException ex = assertThrows(NotFoundException.class,
                 () -> assetService.get(saved.getId(), other));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatus());
+    }
+
+    @Test
+    void duplicateAssetNoFailsAndPointsToField() {
+        AssetSaveDTO first = baseAsset("DUP-NO");
+        assetService.save(first);
+
+        AssetSaveDTO second = baseAsset("DUP-NO");
+        second.setName("另一台");
+        BusinessException ex = assertThrows(BusinessException.class, () -> assetService.save(second));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("资产编号"));
+    }
+
+    @Test
+    void duplicateSerialNoFailsAndPointsToField() {
+        AssetSaveDTO first = baseAsset("SN-A");
+        first.setSerialNo("SN-SAME-001");
+        assetService.save(first);
+
+        AssetSaveDTO second = baseAsset("SN-B");
+        second.setSerialNo("SN-SAME-001");
+        BusinessException ex = assertThrows(BusinessException.class, () -> assetService.save(second));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("序列号"));
+    }
+
+    private AssetSaveDTO baseAsset(String assetNo) {
+        AssetSaveDTO dto = new AssetSaveDTO();
+        dto.setAssetNo(assetNo);
+        dto.setName("测试设备");
+        dto.setCategoryId(categoryId);
+        return dto;
     }
 
     private SysUserDO insertUser(String username, UserRole role) {

@@ -4,6 +4,12 @@ import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import type { Result } from '@/types/api'
 
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    skipErrorMessage?: boolean
+  }
+}
+
 const http = axios.create({
   baseURL: '/api',
   timeout: 15000,
@@ -29,6 +35,9 @@ http.interceptors.response.use(
   (error) => {
     const status = error.response?.status
     const message = error.response?.data?.message ?? '请求失败'
+    if (error.config?.skipErrorMessage) {
+      return Promise.reject(error)
+    }
     if (status === 401) {
       useAuthStore().clear()
       if (router.currentRoute.value.name !== 'login') {
