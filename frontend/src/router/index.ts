@@ -22,7 +22,13 @@ const router = createRouter({
       component: AppLayout,
       meta: { requiresAuth: true },
       children: [
-        { path: '', redirect: { name: 'assets' } },
+        { path: '', redirect: { name: 'home' } },
+        {
+          path: 'home',
+          name: 'home',
+          component: () => import('@/views/home/HomeView.vue'),
+          meta: { title: '首页' },
+        },
         {
           path: 'assets',
           name: 'assets',
@@ -94,7 +100,7 @@ router.beforeEach((to) => {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
   if (auth.loggedIn && to.name === 'login') {
-    return { name: 'assets' }
+    return { name: 'home' }
   }
   if (auth.loggedIn && auth.mustChangePassword && to.name !== 'password') {
     return { name: 'password' }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Box, Lock, Notebook, SwitchButton, Tickets, User } from '@element-plus/icons-vue'
+import { Box, House, Lock, Notebook, SwitchButton, Tickets, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -11,6 +11,7 @@ const auth = useAuthStore()
 const menus = computed(() => {
   if (auth.role === 'ADMIN') {
     return [
+      { path: '/home', title: '首页', icon: House },
       { path: '/assets', title: '设备台账', icon: Box },
       { path: '/borrows/todos', title: '领用办理', icon: Tickets },
       { path: '/borrows/mine', title: '我的领用', icon: Notebook },
@@ -19,6 +20,7 @@ const menus = computed(() => {
     ]
   }
   return [
+    { path: '/home', title: '首页', icon: House },
     { path: '/assets', title: '设备', icon: Box },
     { path: '/borrows/mine', title: '我的领用', icon: Notebook },
     { path: '/password', title: '修改密码', icon: Lock },

@@ -25,6 +25,9 @@ http.interceptors.request.use((config) => {
 
 http.interceptors.response.use(
   (response) => {
+    if (response.config.responseType === 'blob' || response.data instanceof Blob) {
+      return response
+    }
     const body = response.data as Result<unknown>
     if (body && typeof body.code === 'number' && body.code !== 0) {
       ElMessage.error(body.message || '请求失败')
@@ -32,11 +35,22 @@ http.interceptors.response.use(
     }
     return response
   },
-  (error) => {
+  async (error) => {
     const status = error.response?.status
-    const message = error.response?.data?.message ?? '请求失败'
+    let message = '请求失败'
+    const payload = error.response?.data
     if (error.config?.skipErrorMessage) {
       return Promise.reject(error)
+    }
+    if (payload instanceof Blob) {
+      try {
+        const body = JSON.parse(await payload.text()) as Result<unknown>
+        message = body.message || message
+      } catch {
+        message = '请求失败'
+      }
+    } else if (payload && typeof payload === 'object' && 'message' in payload) {
+      message = String((payload as Result<unknown>).message || message)
     }
     if (status === 401) {
       useAuthStore().clear()

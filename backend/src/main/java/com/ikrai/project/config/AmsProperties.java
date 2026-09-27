@@ -12,6 +12,7 @@ public class AmsProperties {
 
     private final Borrow borrow = new Borrow();
     private final Init init = new Init();
+    private final Excel excel = new Excel();
 
     @Data
     public static class Borrow {
@@ -22,5 +23,11 @@ public class AmsProperties {
     public static class Init {
         private String adminPassword;
         private String userPassword;
+    }
+
+    @Data
+    public static class Excel {
+        private int importMaxRows = 2000;
+        private int exportMaxRows = 10000;
     }
 }

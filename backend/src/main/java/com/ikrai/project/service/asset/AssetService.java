@@ -18,4 +18,8 @@ public interface AssetService {
     AssetDetailVO get(Long id, AuthUser viewer);
 
     PageVO<AssetVO> list(AssetQuery query, AuthUser viewer);
+
+    long count(AssetQuery query, AuthUser viewer);
+
+    java.util.List<AssetVO> listAll(AssetQuery query, AuthUser viewer);
 }

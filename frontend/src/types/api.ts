@@ -52,6 +52,33 @@ export interface UserQuery {
   pageSize?: number
 }
 
+export interface StatsOverview {
+  total: number
+  inStock: number
+  borrowed: number
+  pending: number
+  repairing: number
+  scrapped: number
+  dueSoon: number
+  overdue: number
+  pendingApproval: number
+  myApplying: number
+  myUsing: number
+  myDueSoon: number
+  myOverdue: number
+}
+
+export interface StatsNameCount {
+  id: number
+  name: string
+  count: number
+}
+
+export interface StatsTrend {
+  month: string
+  count: number
+}
+
 export interface UserSavePayload {
   username?: string
   realName: string
@@ -130,6 +157,18 @@ export interface BorrowTodos {
   pending: BorrowOrder[]
   approved: BorrowOrder[]
   returnPending: BorrowOrder[]
+}
+
+export interface AssetImportFail {
+  rowNum: number
+  assetNo?: string
+  reason: string
+}
+
+export interface AssetImportResult {
+  successCount: number
+  failCount: number
+  failures: AssetImportFail[]
 }
 
 export interface AssetQuery {

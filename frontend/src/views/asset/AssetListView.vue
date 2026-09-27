@@ -3,11 +3,12 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowDown, ArrowUp, Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listAssets, removeAsset } from '@/api/asset'
+import { downloadImportFailures, downloadImportTemplate, exportAssets, importAssets, listAssets, removeAsset } from '@/api/asset'
 import { listCategories, listDepts, listLocations } from '@/api/dict'
 import { useAuthStore } from '@/stores/auth'
 import { assetTagType } from '@/utils/status'
-import type { AssetItem, DictItem } from '@/types/api'
+import type { AssetImportResult, AssetItem, DictItem } from '@/types/api'
+import type { UploadFile } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
@@ -33,6 +34,11 @@ const query = reactive({
 })
 
 const isAdmin = computed(() => auth.role === 'ADMIN')
+const importing = ref(false)
+const exporting = ref(false)
+const importVisible = ref(false)
+const importFile = ref<File>()
+const importResult = ref<AssetImportResult | null>(null)
 
 function queryText(value: unknown) {
   return typeof value === 'string' ? value : ''
@@ -134,6 +140,73 @@ function reset() {
   load()
 }
 
+function currentFilter() {
+  return {
+    keyword: query.keyword || undefined,
+    categoryIds: query.categoryIds.length ? query.categoryIds : undefined,
+    statuses: query.statuses.length ? query.statuses : undefined,
+    deptId: query.deptId,
+    locationId: query.locationId,
+    borrowStartFrom: query.borrowRange?.[0],
+    borrowStartTo: query.borrowRange?.[1],
+    dueFrom: query.dueRange?.[0],
+    dueTo: query.dueRange?.[1],
+  }
+}
+
+function openImport() {
+  importFile.value = undefined
+  importResult.value = null
+  importVisible.value = true
+}
+
+function onImportChange(upload: UploadFile) {
+  importFile.value = upload.raw
+  importResult.value = null
+}
+
+async function submitImport() {
+  if (!importFile.value) {
+    ElMessage.warning('请先选择 xlsx 文件')
+    return
+  }
+  importing.value = true
+  try {
+    const { data } = await importAssets(importFile.value)
+    importResult.value = data.data
+    ElMessage.success(`导入完成：成功 ${data.data.successCount}，失败 ${data.data.failCount}`)
+    await load()
+  } catch (error) {
+    if (error instanceof Error && error.message) {
+      ElMessage.error(error.message)
+    }
+  } finally {
+    importing.value = false
+  }
+}
+
+async function downloadTemplate() {
+  await downloadImportTemplate()
+}
+
+async function downloadFails() {
+  await downloadImportFailures()
+}
+
+async function exportCurrent() {
+  exporting.value = true
+  try {
+    await exportAssets(currentFilter())
+    ElMessage.success('已开始下载')
+  } catch (error) {
+    if (error instanceof Error && error.message) {
+      ElMessage.error(error.message)
+    }
+  } finally {
+    exporting.value = false
+  }
+}
+
 async function remove(row: AssetItem) {
   await ElMessageBox.confirm(`确认删除设备 ${row.assetNo}？仅从未被领用的在库设备可删除。`, '删除确认', {
     type: 'warning',
@@ -219,8 +292,40 @@ watch(() => [query.page, query.pageSize], () => load())
       <el-button v-if="isAdmin" type="primary" :icon="Plus" @click="router.push({ name: 'asset-create' })">
         新建设备
       </el-button>
+      <el-button v-if="isAdmin" @click="openImport">导入</el-button>
+      <el-button v-if="isAdmin" :loading="exporting" @click="exportCurrent">导出</el-button>
       <span v-else class="toolbar-hint">仅展示在库设备与本人相关设备</span>
     </div>
+
+    <el-dialog v-model="importVisible" title="导入设备" width="640px" destroy-on-close>
+      <p class="import-hint">先下载模板，按表头填写。第二行示例（资产编号 EXAMPLE）不会入库。单次最多 2000 行。</p>
+      <div class="import-actions">
+        <el-button @click="downloadTemplate">下载模板</el-button>
+        <el-upload
+          :auto-upload="false"
+          :limit="1"
+          accept=".xlsx"
+          :on-change="onImportChange"
+          :on-remove="() => (importFile = undefined)"
+        >
+          <el-button>选择文件</el-button>
+        </el-upload>
+        <el-button type="primary" :loading="importing" :disabled="!importFile" @click="submitImport">
+          开始导入
+        </el-button>
+      </div>
+      <div v-if="importResult" class="import-result">
+        <p>成功 {{ importResult.successCount }} 行，失败 {{ importResult.failCount }} 行</p>
+        <el-table v-if="importResult.failures.length" :data="importResult.failures" max-height="240" stripe>
+          <el-table-column prop="rowNum" label="行号" width="72" />
+          <el-table-column prop="assetNo" label="资产编号" min-width="120" />
+          <el-table-column prop="reason" label="原因" min-width="200" />
+        </el-table>
+        <el-button v-if="importResult.failCount" class="fail-download" @click="downloadFails">
+          下载失败明细
+        </el-button>
+      </div>
+    </el-dialog>
 
     <div class="table-panel">
       <el-table
@@ -279,5 +384,26 @@ watch(() => [query.page, query.pageSize], () => load())
 .toolbar-hint {
   color: var(--ams-text-secondary);
   font-size: 13px;
+}
+
+.import-hint {
+  margin: 0 0 12px;
+  color: var(--ams-text-secondary);
+  font-size: 13px;
+}
+
+.import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.import-result {
+  margin-top: 16px;
+}
+
+.fail-download {
+  margin-top: 12px;
 }
 </style>

@@ -1,5 +1,51 @@
+import axios from 'axios'
 import http from './http'
-import type { AssetItem, AssetQuery, PageResult, Result } from '@/types/api'
+import type { AssetImportResult, AssetItem, AssetQuery, PageResult, Result } from '@/types/api'
+
+function filenameFrom(disposition: string | undefined, fallback: string) {
+  if (!disposition) return fallback
+  const encoded = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(disposition)
+  if (encoded) {
+    return decodeURIComponent(encoded[1].replace(/"/g, ''))
+  }
+  const plain = /filename="?([^"]+)"?/i.exec(disposition)
+  return plain ? decodeURIComponent(plain[1]) : fallback
+}
+
+function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+async function download(path: string, fallback: string, params?: AssetQuery) {
+  try {
+    const response = await http.get<Blob>(path, {
+      params,
+      responseType: 'blob',
+      timeout: 60000,
+      skipErrorMessage: true,
+    })
+    const blob = response.data
+    if (blob.type.includes('application/json')) {
+      const body = JSON.parse(await blob.text()) as Result<null>
+      throw new Error(body.message || '下载失败')
+    }
+    saveBlob(blob, filenameFrom(response.headers['content-disposition'], fallback))
+  } catch (error) {
+    if (error instanceof Error && !(axios.isAxiosError(error))) {
+      throw error
+    }
+    if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+      const body = JSON.parse(await error.response.data.text()) as Result<null>
+      throw new Error(body.message || '下载失败')
+    }
+    throw error
+  }
+}
 
 export function listAssets(params: AssetQuery) {
   return http.get<Result<PageResult<AssetItem>>>('/assets', { params })
@@ -19,4 +65,25 @@ export function updateAsset(id: number, payload: Partial<AssetItem>) {
 
 export function removeAsset(id: number) {
   return http.delete<Result<null>>(`/assets/${id}`)
+}
+
+export function downloadImportTemplate() {
+  return download('/assets/import-template', '设备导入模板.xlsx')
+}
+
+export function downloadImportFailures() {
+  return download('/assets/import-failures', '导入失败明细.xlsx')
+}
+
+export function exportAssets(params: AssetQuery) {
+  return download('/assets/export', '设备台账.xlsx', params)
+}
+
+export function importAssets(file: File) {
+  const form = new FormData()
+  form.append('file', file)
+  return http.post<Result<AssetImportResult>>('/assets/import', form, {
+    timeout: 60000,
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
 }

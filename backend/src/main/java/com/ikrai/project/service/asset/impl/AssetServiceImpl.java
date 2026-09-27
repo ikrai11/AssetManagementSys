@@ -126,14 +126,31 @@ public class AssetServiceImpl implements AssetService {
         int page = query.getPage() == null || query.getPage() < 1 ? 1 : query.getPage();
         int pageSize = query.getPageSize() == null ? 20 : Math.min(query.getPageSize(), 100);
 
-        Page<AssetDO> result = assetDao.selectPage(new Page<>(page, pageSize), buildWrapper(query, viewer));
+        Page<AssetDO> result = assetDao.selectPage(new Page<>(page, pageSize), buildWrapper(query, viewer, true));
         List<AssetVO> list = result.getRecords().stream()
                 .map(item -> toVo(item, viewer.isAdmin()))
                 .toList();
         return new PageVO<>(list, result.getTotal(), page, pageSize);
     }
 
-    private LambdaQueryWrapper<AssetDO> buildWrapper(AssetQuery query, AuthUser viewer) {
+    @Override
+    public long count(AssetQuery query, AuthUser viewer) {
+        validateDateRange(query.getBorrowStartFrom(), query.getBorrowStartTo());
+        validateDateRange(query.getDueFrom(), query.getDueTo());
+        Long total = assetDao.selectCount(buildWrapper(query, viewer, false));
+        return total == null ? 0 : total;
+    }
+
+    @Override
+    public List<AssetVO> listAll(AssetQuery query, AuthUser viewer) {
+        validateDateRange(query.getBorrowStartFrom(), query.getBorrowStartTo());
+        validateDateRange(query.getDueFrom(), query.getDueTo());
+        return assetDao.selectList(buildWrapper(query, viewer, true)).stream()
+                .map(item -> toVo(item, viewer.isAdmin()))
+                .toList();
+    }
+
+    private LambdaQueryWrapper<AssetDO> buildWrapper(AssetQuery query, AuthUser viewer, boolean ordered) {
         LambdaQueryWrapper<AssetDO> wrapper = Wrappers.lambdaQuery();
         if (query.getCategoryIds() != null && !query.getCategoryIds().isEmpty()) {
             wrapper.in(AssetDO::getCategoryId, query.getCategoryIds());
@@ -177,7 +194,9 @@ public class AssetServiceImpl implements AssetService {
         if (!viewer.isAdmin()) {
             applyUserScope(wrapper, viewer.getUserId());
         }
-        wrapper.orderByDesc(AssetDO::getUpdatedAt).orderByDesc(AssetDO::getId);
+        if (ordered) {
+            wrapper.orderByDesc(AssetDO::getUpdatedAt).orderByDesc(AssetDO::getId);
+        }
         return wrapper;
     }
 

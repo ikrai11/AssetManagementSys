@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { listBorrows, requestReturn, withdrawBorrow } from '@/api/borrow'
 import { borrowTagType } from '@/utils/status'
 import type { BorrowOrder } from '@/types/api'
 
 const router = useRouter()
+const route = useRoute()
 const loading = ref(false)
-const tab = ref('active')
+const tab = ref(typeof route.query.tab === 'string' ? route.query.tab : 'active')
 const all = ref<BorrowOrder[]>([])
 
 const groups = computed(() => ({
