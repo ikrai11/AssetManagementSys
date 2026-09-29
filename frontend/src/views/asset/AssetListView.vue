@@ -6,7 +6,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { downloadImportFailures, downloadImportTemplate, exportAssets, importAssets, listAssets, removeAsset } from '@/api/asset'
 import { listCategories, listDepts, listLocations } from '@/api/dict'
 import { useAuthStore } from '@/stores/auth'
-import { assetTagType } from '@/utils/status'
+import { assetTagClass, assetTagType } from '@/utils/status'
 import type { AssetImportResult, AssetItem, DictItem } from '@/types/api'
 import type { UploadFile } from 'element-plus'
 
@@ -243,6 +243,8 @@ watch(() => [query.page, query.pageSize], () => load())
             <el-option label="审批中" value="PENDING" />
             <el-option label="已领用" value="BORROWED" />
             <el-option label="已逾期" value="OVERDUE" />
+            <el-option label="维修中" value="REPAIRING" />
+            <el-option label="已报废" value="SCRAPPED" />
           </el-select>
         </el-form-item>
         <template v-if="moreFilters">
@@ -339,7 +341,9 @@ watch(() => [query.page, query.pageSize], () => load())
         <el-table-column prop="categoryName" label="类型" width="88" />
         <el-table-column label="状态" width="88">
           <template #default="{ row }">
-            <el-tag :type="assetTagType(row.status, row.overdue)">{{ row.overdue ? '已逾期' : row.statusLabel }}</el-tag>
+            <el-tag :type="assetTagType(row.status, row.overdue)" :class="assetTagClass(row.status)">
+              {{ row.overdue ? '已逾期' : row.statusLabel }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="locationName" label="存放地点" min-width="100" show-overflow-tooltip />
@@ -351,7 +355,12 @@ watch(() => [query.page, query.pageSize], () => load())
             <el-button link type="primary" @click="router.push({ name: 'asset-detail', params: { id: row.id } })">
               详情
             </el-button>
-            <el-button v-if="isAdmin" link type="primary" @click="router.push({ name: 'asset-edit', params: { id: row.id } })">
+            <el-button
+              v-if="isAdmin && row.status !== 'SCRAPPED'"
+              link
+              type="primary"
+              @click="router.push({ name: 'asset-edit', params: { id: row.id } })"
+            >
               编辑
             </el-button>
             <el-button

@@ -119,6 +119,18 @@ export interface AssetItem {
   overdue?: boolean
   updatedAt?: string
   logs?: BorrowLog[]
+  lifecycleLogs?: AssetLog[]
+  repairSentDate?: string
+  repairFault?: string
+}
+
+export interface AssetLog {
+  id: number
+  action: string
+  operatorId?: number
+  operatorName?: string
+  comment?: string
+  createdAt?: string
 }
 
 export interface BorrowLog {

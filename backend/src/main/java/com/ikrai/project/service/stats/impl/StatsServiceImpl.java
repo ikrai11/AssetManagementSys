@@ -58,8 +58,8 @@ public class StatsServiceImpl implements StatsService {
             vo.setInStock(countAssets(AssetStatus.IN_STOCK.name(), null, null, null));
             vo.setPending(countAssets(AssetStatus.PENDING.name(), null, null, null));
             vo.setBorrowed(countAssets(AssetStatus.BORROWED.name(), null, null, null));
-            vo.setRepairing(0);
-            vo.setScrapped(0);
+            vo.setRepairing(countAssets(AssetStatus.REPAIRING.name(), null, null, null));
+            vo.setScrapped(countAssets(AssetStatus.SCRAPPED.name(), null, null, null));
             vo.setDueSoon(countAssets(AssetStatus.BORROWED.name(), today, dueUntil, null));
             vo.setOverdue(countAssets(AssetStatus.BORROWED.name(), null, today.minusDays(1), null));
             vo.setPendingApproval(countOrders(List.of(BorrowOrderStatus.PENDING.name()), null));

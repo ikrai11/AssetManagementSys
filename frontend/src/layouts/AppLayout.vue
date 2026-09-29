@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Bell, Box, House, Lock, Message, Notebook, Setting, SwitchButton, Tickets, User } from '@element-plus/icons-vue'
+import { Bell, Box, DocumentChecked, House, Lock, Message, Notebook, Setting, SwitchButton, Tickets, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useMessageStore } from '@/stores/message'
 
@@ -15,6 +15,7 @@ const menus = computed(() => {
     return [
       { path: '/home', title: '首页', icon: House },
       { path: '/assets', title: '设备台账', icon: Box },
+      { path: '/stocktakes', title: '盘点', icon: DocumentChecked },
       { path: '/borrows/todos', title: '领用办理', icon: Tickets },
       { path: '/messages', title: '消息中心', icon: Bell },
       { path: '/borrows/mine', title: '我的领用', icon: Notebook },
@@ -48,6 +49,7 @@ watch(() => route.fullPath, () => {
   }
 })
 const pageTitle = computed(() => (typeof route.meta.title === 'string' ? route.meta.title : '资产管理系统'))
+const activeMenu = computed(() => (route.path.startsWith('/stocktakes') ? '/stocktakes' : route.path))
 
 async function logout() {
   await auth.logout()
@@ -60,7 +62,7 @@ async function logout() {
     <el-aside class="aside" width="210px">
       <div class="brand">资产管理系统</div>
       <el-menu
-        :default-active="$route.path"
+        :default-active="activeMenu"
         router
         class="menu"
         background-color="#1f2d3d"

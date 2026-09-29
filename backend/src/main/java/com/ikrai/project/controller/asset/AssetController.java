@@ -2,9 +2,14 @@ package com.ikrai.project.controller.asset;
 
 import com.ikrai.project.common.result.Result;
 import com.ikrai.project.config.SecurityUsers;
+import com.ikrai.project.dto.AssetRepairFinishDTO;
+import com.ikrai.project.dto.AssetRepairStartDTO;
 import com.ikrai.project.dto.AssetSaveDTO;
+import com.ikrai.project.dto.AssetScrapDTO;
+import com.ikrai.project.dto.AssetTransferDTO;
 import com.ikrai.project.query.AssetQuery;
 import com.ikrai.project.service.asset.AssetExcelService;
+import com.ikrai.project.service.asset.AssetLifecycleService;
 import com.ikrai.project.service.asset.AssetService;
 import com.ikrai.project.vo.AssetDetailVO;
 import com.ikrai.project.vo.AssetImportVO;
@@ -37,10 +42,14 @@ public class AssetController {
 
     private final AssetService assetService;
     private final AssetExcelService assetExcelService;
+    private final AssetLifecycleService assetLifecycleService;
 
-    public AssetController(AssetService assetService, AssetExcelService assetExcelService) {
+    public AssetController(AssetService assetService,
+                           AssetExcelService assetExcelService,
+                           AssetLifecycleService assetLifecycleService) {
         this.assetService = assetService;
         this.assetExcelService = assetExcelService;
+        this.assetLifecycleService = assetLifecycleService;
     }
 
     @GetMapping
@@ -94,6 +103,34 @@ public class AssetController {
     @PreAuthorize("hasRole('ADMIN')")
     public Result<Void> remove(@PathVariable Long id) {
         assetService.remove(id);
+        return Result.ok(null);
+    }
+
+    @PostMapping("/{id}/transfer")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Void> transfer(@PathVariable Long id, @Valid @RequestBody AssetTransferDTO dto) {
+        assetLifecycleService.transfer(SecurityUsers.current(), id, dto);
+        return Result.ok(null);
+    }
+
+    @PostMapping("/{id}/repair")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Void> startRepair(@PathVariable Long id, @Valid @RequestBody AssetRepairStartDTO dto) {
+        assetLifecycleService.startRepair(SecurityUsers.current(), id, dto);
+        return Result.ok(null);
+    }
+
+    @PostMapping("/{id}/repair/finish")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Void> finishRepair(@PathVariable Long id, @Valid @RequestBody AssetRepairFinishDTO dto) {
+        assetLifecycleService.finishRepair(SecurityUsers.current(), id, dto);
+        return Result.ok(null);
+    }
+
+    @PostMapping("/{id}/scrap")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Void> scrap(@PathVariable Long id, @Valid @RequestBody AssetScrapDTO dto) {
+        assetLifecycleService.scrap(SecurityUsers.current(), id, dto);
         return Result.ok(null);
     }
 

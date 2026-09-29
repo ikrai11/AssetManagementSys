@@ -10,6 +10,8 @@ import com.ikrai.project.common.exception.BusinessException;
 import com.ikrai.project.common.exception.NotFoundException;
 import com.ikrai.project.dao.AssetCategoryDao;
 import com.ikrai.project.dao.AssetDao;
+import com.ikrai.project.dao.AssetLogDao;
+import com.ikrai.project.dao.AssetRepairDao;
 import com.ikrai.project.dao.BorrowLogDao;
 import com.ikrai.project.dao.BorrowOrderDao;
 import com.ikrai.project.dao.SysDeptDao;
@@ -17,6 +19,8 @@ import com.ikrai.project.dao.SysLocationDao;
 import com.ikrai.project.dao.SysUserDao;
 import com.ikrai.project.dataobject.AssetCategoryDO;
 import com.ikrai.project.dataobject.AssetDO;
+import com.ikrai.project.dataobject.AssetLogDO;
+import com.ikrai.project.dataobject.AssetRepairDO;
 import com.ikrai.project.dataobject.BorrowLogDO;
 import com.ikrai.project.dataobject.BorrowOrderDO;
 import com.ikrai.project.dataobject.SysDeptDO;
@@ -26,6 +30,7 @@ import com.ikrai.project.dto.AssetSaveDTO;
 import com.ikrai.project.query.AssetQuery;
 import com.ikrai.project.service.asset.AssetService;
 import com.ikrai.project.vo.AssetDetailVO;
+import com.ikrai.project.vo.AssetLogVO;
 import com.ikrai.project.vo.AssetVO;
 import com.ikrai.project.vo.BorrowLogVO;
 import com.ikrai.project.vo.PageVO;
@@ -53,6 +58,8 @@ public class AssetServiceImpl implements AssetService {
     private final SysUserDao sysUserDao;
     private final BorrowOrderDao borrowOrderDao;
     private final BorrowLogDao borrowLogDao;
+    private final AssetLogDao assetLogDao;
+    private final AssetRepairDao assetRepairDao;
 
     public AssetServiceImpl(AssetDao assetDao,
                             AssetCategoryDao assetCategoryDao,
@@ -60,7 +67,9 @@ public class AssetServiceImpl implements AssetService {
                             SysLocationDao sysLocationDao,
                             SysUserDao sysUserDao,
                             BorrowOrderDao borrowOrderDao,
-                            BorrowLogDao borrowLogDao) {
+                            BorrowLogDao borrowLogDao,
+                            AssetLogDao assetLogDao,
+                            AssetRepairDao assetRepairDao) {
         this.assetDao = assetDao;
         this.assetCategoryDao = assetCategoryDao;
         this.sysDeptDao = sysDeptDao;
@@ -68,6 +77,8 @@ public class AssetServiceImpl implements AssetService {
         this.sysUserDao = sysUserDao;
         this.borrowOrderDao = borrowOrderDao;
         this.borrowLogDao = borrowLogDao;
+        this.assetLogDao = assetLogDao;
+        this.assetRepairDao = assetRepairDao;
     }
 
     @Override
@@ -86,6 +97,9 @@ public class AssetServiceImpl implements AssetService {
     @Transactional
     public AssetVO update(Long id, AssetSaveDTO dto) {
         AssetDO asset = requireAsset(id);
+        if (AssetStatus.SCRAPPED.name().equals(asset.getStatus())) {
+            throw new BusinessException("已报废设备只读，不能修改");
+        }
         assertUnique(dto.getAssetNo(), dto.getSerialNo(), id);
         fill(asset, dto);
         assetDao.updateById(asset);
@@ -116,6 +130,16 @@ public class AssetServiceImpl implements AssetService {
         AssetDetailVO vo = new AssetDetailVO();
         copy(toVo(asset, viewer.isAdmin()), vo);
         vo.setLogs(listLogs(id));
+        vo.setLifecycleLogs(listLifecycle(id));
+        AssetRepairDO repair = assetRepairDao.selectOne(Wrappers.<AssetRepairDO>lambdaQuery()
+                .eq(AssetRepairDO::getAssetId, id)
+                .eq(AssetRepairDO::getStatus, "OPEN")
+                .orderByDesc(AssetRepairDO::getId)
+                .last("LIMIT 1"));
+        if (repair != null) {
+            vo.setRepairSentDate(repair.getSentDate());
+            vo.setRepairFault(repair.getFault());
+        }
         return vo;
     }
 
@@ -340,6 +364,32 @@ public class AssetServiceImpl implements AssetService {
         List<BorrowLogVO> result = new ArrayList<>();
         for (BorrowLogDO log : logs) {
             BorrowLogVO vo = new BorrowLogVO();
+            vo.setId(log.getId());
+            vo.setAction(log.getAction());
+            vo.setOperatorId(log.getOperatorId());
+            SysUserDO operator = users.get(log.getOperatorId());
+            vo.setOperatorName(operator == null ? null : operator.getRealName());
+            vo.setComment(log.getComment());
+            vo.setCreatedAt(log.getCreatedAt());
+            result.add(vo);
+        }
+        return result;
+    }
+
+    private List<AssetLogVO> listLifecycle(Long assetId) {
+        List<AssetLogDO> logs = assetLogDao.selectList(Wrappers.<AssetLogDO>lambdaQuery()
+                .eq(AssetLogDO::getAssetId, assetId)
+                .orderByAsc(AssetLogDO::getCreatedAt)
+                .orderByAsc(AssetLogDO::getId));
+        Map<Long, SysUserDO> users = logs.stream()
+                .map(AssetLogDO::getOperatorId)
+                .distinct()
+                .map(sysUserDao::selectById)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(SysUserDO::getId, Function.identity()));
+        List<AssetLogVO> result = new ArrayList<>();
+        for (AssetLogDO log : logs) {
+            AssetLogVO vo = new AssetLogVO();
             vo.setId(log.getId());
             vo.setAction(log.getAction());
             vo.setOperatorId(log.getOperatorId());

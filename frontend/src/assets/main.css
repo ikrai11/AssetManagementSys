@@ -128,3 +128,15 @@ a {
   gap: 8px;
   margin-bottom: 16px;
 }
+
+.el-tag.tag-repairing {
+  --el-tag-bg-color: #f5f3ff;
+  --el-tag-border-color: #c4b5fd;
+  --el-tag-text-color: #6d28d9;
+}
+
+.el-tag.tag-scrapped {
+  --el-tag-bg-color: #f3f4f6;
+  --el-tag-border-color: #e5e7eb;
+  --el-tag-text-color: #6b7280;
+}

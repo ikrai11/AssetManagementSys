@@ -79,6 +79,22 @@ export function exportAssets(params: AssetQuery) {
   return download('/assets/export', '设备台账.xlsx', params)
 }
 
+export function transferAsset(id: number, payload: { deptId?: number; locationId?: number; reason: string }) {
+  return http.post<Result<null>>(`/assets/${id}/transfer`, payload)
+}
+
+export function startRepair(id: number, payload: { fault: string; sentDate?: string }) {
+  return http.post<Result<null>>(`/assets/${id}/repair`, payload)
+}
+
+export function finishRepair(id: number, payload: { result: string; finishedDate?: string }) {
+  return http.post<Result<null>>(`/assets/${id}/repair/finish`, payload)
+}
+
+export function scrapAsset(id: number, reason: string) {
+  return http.post<Result<null>>(`/assets/${id}/scrap`, { reason })
+}
+
 export function importAssets(file: File) {
   const form = new FormData()
   form.append('file', file)

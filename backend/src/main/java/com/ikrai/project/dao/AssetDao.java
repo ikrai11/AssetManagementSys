@@ -78,4 +78,27 @@ public interface AssetDao extends BaseMapper<AssetDO> {
                                 @Param("version") Integer version,
                                 @Param("status") String status,
                                 @Param("expectedReturnDate") LocalDate expectedReturnDate);
+
+    @Update("""
+            UPDATE asset
+            SET status = #{newStatus},
+                version = version + 1
+            WHERE id = #{id} AND version = #{version} AND status = #{oldStatus}
+            """)
+    int casStatus(@Param("id") Long id,
+                  @Param("version") Integer version,
+                  @Param("oldStatus") String oldStatus,
+                  @Param("newStatus") String newStatus);
+
+    @Update("""
+            UPDATE asset
+            SET dept_id = #{deptId},
+                location_id = #{locationId},
+                version = version + 1
+            WHERE id = #{id} AND version = #{version} AND status <> 'SCRAPPED'
+            """)
+    int casRelocate(@Param("id") Long id,
+                    @Param("version") Integer version,
+                    @Param("deptId") Long deptId,
+                    @Param("locationId") Long locationId);
 }

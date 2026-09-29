@@ -78,6 +78,18 @@ const router = createRouter({
           meta: { title: '领用详情' },
         },
         {
+          path: 'stocktakes',
+          name: 'stocktakes',
+          component: () => import('@/views/stocktake/StocktakeListView.vue'),
+          meta: { role: 'ADMIN', title: '盘点' },
+        },
+        {
+          path: 'stocktakes/:id',
+          name: 'stocktake-detail',
+          component: () => import('@/views/stocktake/StocktakeDetailView.vue'),
+          meta: { role: 'ADMIN', title: '盘点详情' },
+        },
+        {
           path: 'messages',
           name: 'messages',
           component: () => import('@/views/message/MessageCenterView.vue'),

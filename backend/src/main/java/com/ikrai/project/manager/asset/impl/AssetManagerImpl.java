@@ -96,4 +96,20 @@ public class AssetManagerImpl implements AssetManager {
             throw new ConflictException();
         }
     }
+
+    @Override
+    public void changeStatus(AssetDO asset, String fromStatus, String toStatus) {
+        int rows = assetDao.casStatus(asset.getId(), asset.getVersion(), fromStatus, toStatus);
+        if (rows == 0) {
+            throw new ConflictException();
+        }
+    }
+
+    @Override
+    public void relocate(AssetDO asset, Long deptId, Long locationId) {
+        int rows = assetDao.casRelocate(asset.getId(), asset.getVersion(), deptId, locationId);
+        if (rows == 0) {
+            throw new ConflictException();
+        }
+    }
 }

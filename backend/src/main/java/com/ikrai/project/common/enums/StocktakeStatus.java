@@ -5,12 +5,9 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum AssetStatus {
-    IN_STOCK("在库"),
-    PENDING("审批中"),
-    BORROWED("已领用"),
-    REPAIRING("维修中"),
-    SCRAPPED("已报废");
+public enum StocktakeStatus {
+    OPEN("盘点中"),
+    FINISHED("已结束");
 
     private final String label;
 }

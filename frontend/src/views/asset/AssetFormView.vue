@@ -48,6 +48,11 @@ async function load() {
     loading.value = true
     try {
       const { data } = await getAsset(Number(route.params.id))
+      if (data.data.status === 'SCRAPPED') {
+        ElMessage.warning('已报废设备只读，不能修改')
+        await router.replace({ name: 'asset-detail', params: { id: route.params.id } })
+        return
+      }
       Object.assign(form, {
         assetNo: data.data.assetNo,
         name: data.data.name,

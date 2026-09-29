@@ -3,7 +3,14 @@ export function assetTagType(status?: string, overdue?: boolean) {
   if (status === 'IN_STOCK') return 'success'
   if (status === 'PENDING') return 'primary'
   if (status === 'BORROWED') return 'warning'
+  if (status === 'REPAIRING' || status === 'SCRAPPED') return 'info'
   return 'info'
+}
+
+export function assetTagClass(status?: string) {
+  if (status === 'REPAIRING') return 'tag-repairing'
+  if (status === 'SCRAPPED') return 'tag-scrapped'
+  return ''
 }
 
 export function borrowTagType(status?: string, overdue?: boolean) {
@@ -26,4 +33,9 @@ export const actionLabel: Record<string, string> = {
   RENEW_APPLY: '申请续借',
   RENEW_APPROVE: '续借通过',
   RENEW_REJECT: '续借驳回',
+  TRANSFER: '调拨',
+  REPAIR_START: '送修',
+  REPAIR_FINISH: '维修完成',
+  SCRAP: '报废',
+  STOCKTAKE: '盘点',
 }

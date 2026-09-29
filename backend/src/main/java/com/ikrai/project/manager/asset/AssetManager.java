@@ -17,4 +17,8 @@ public interface AssetManager {
     void confirmReturn(AssetDO asset);
 
     void updateExpectedReturn(AssetDO asset, LocalDate expectedReturnDate);
+
+    void changeStatus(AssetDO asset, String fromStatus, String toStatus);
+
+    void relocate(AssetDO asset, Long deptId, Long locationId);
 }

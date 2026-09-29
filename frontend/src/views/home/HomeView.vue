@@ -73,6 +73,8 @@ const statusOption = computed<EChartsCoreOption | null>(() => {
     { name: '在库', value: data.inStock },
     { name: '审批中', value: data.pending },
     { name: '已领用', value: data.borrowed },
+    { name: '维修中', value: data.repairing },
+    { name: '已报废', value: data.scrapped },
   ].filter((item) => item.value > 0)
   if (!items.length) return null
   return {
