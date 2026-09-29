@@ -67,7 +67,7 @@ public class AssetController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public Result<AssetVO> save(@Valid @RequestBody AssetSaveDTO dto) {
-        return Result.ok(assetService.save(dto));
+        return Result.ok(assetService.save(SecurityUsers.current(), dto));
     }
 
     @GetMapping("/import-template")
@@ -103,7 +103,7 @@ public class AssetController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public Result<AssetVO> update(@PathVariable Long id, @Valid @RequestBody AssetSaveDTO dto) {
-        return Result.ok(assetService.update(id, dto));
+        return Result.ok(assetService.update(SecurityUsers.current(), id, dto));
     }
 
     @GetMapping("/{id}/files")
@@ -140,7 +140,7 @@ public class AssetController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public Result<Void> remove(@PathVariable Long id) {
-        assetService.remove(id);
+        assetService.remove(SecurityUsers.current(), id);
         return Result.ok(null);
     }
 

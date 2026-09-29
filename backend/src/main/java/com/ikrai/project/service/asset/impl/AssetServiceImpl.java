@@ -10,6 +10,7 @@ import com.ikrai.project.common.exception.BusinessException;
 import com.ikrai.project.common.exception.NotFoundException;
 import com.ikrai.project.dao.AssetCategoryDao;
 import com.ikrai.project.dao.AssetDao;
+import com.ikrai.project.dao.AuditLogDao;
 import com.ikrai.project.dao.AssetLogDao;
 import com.ikrai.project.dao.AssetRepairDao;
 import com.ikrai.project.dao.BorrowLogDao;
@@ -19,6 +20,7 @@ import com.ikrai.project.dao.SysLocationDao;
 import com.ikrai.project.dao.SysUserDao;
 import com.ikrai.project.dataobject.AssetCategoryDO;
 import com.ikrai.project.dataobject.AssetDO;
+import com.ikrai.project.dataobject.AuditLogDO;
 import com.ikrai.project.dataobject.AssetLogDO;
 import com.ikrai.project.dataobject.AssetRepairDO;
 import com.ikrai.project.dataobject.BorrowLogDO;
@@ -40,6 +42,7 @@ import cn.hutool.core.util.StrUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,6 +65,7 @@ public class AssetServiceImpl implements AssetService {
     private final AssetLogDao assetLogDao;
     private final AssetRepairDao assetRepairDao;
     private final AssetFileService assetFileService;
+    private final AuditLogDao auditLogDao;
 
     public AssetServiceImpl(AssetDao assetDao,
                             AssetCategoryDao assetCategoryDao,
@@ -72,7 +76,8 @@ public class AssetServiceImpl implements AssetService {
                             BorrowLogDao borrowLogDao,
                             AssetLogDao assetLogDao,
                             AssetRepairDao assetRepairDao,
-                            AssetFileService assetFileService) {
+                            AssetFileService assetFileService,
+                            AuditLogDao auditLogDao) {
         this.assetDao = assetDao;
         this.assetCategoryDao = assetCategoryDao;
         this.sysDeptDao = sysDeptDao;
@@ -83,36 +88,63 @@ public class AssetServiceImpl implements AssetService {
         this.assetLogDao = assetLogDao;
         this.assetRepairDao = assetRepairDao;
         this.assetFileService = assetFileService;
+        this.auditLogDao = auditLogDao;
     }
 
     @Override
     @Transactional
     public AssetVO save(AssetSaveDTO dto) {
+        return save(null, dto);
+    }
+
+    @Override
+    @Transactional
+    public AssetVO save(AuthUser operator, AssetSaveDTO dto) {
         assertUnique(dto.getAssetNo(), dto.getSerialNo(), null);
         AssetDO asset = new AssetDO();
         fill(asset, dto);
         asset.setStatus(AssetStatus.IN_STOCK.name());
         asset.setVersion(0);
         assetDao.insert(asset);
+        if (operator != null) {
+            writeAudit(operator, asset.getAssetNo(), "CREATE",
+                    "新增设备 " + asset.getAssetNo() + " " + asset.getName());
+        }
         return toVo(asset, true);
     }
 
     @Override
     @Transactional
     public AssetVO update(Long id, AssetSaveDTO dto) {
+        return update(null, id, dto);
+    }
+
+    @Override
+    @Transactional
+    public AssetVO update(AuthUser operator, Long id, AssetSaveDTO dto) {
         AssetDO asset = requireAsset(id);
         if (AssetStatus.SCRAPPED.name().equals(asset.getStatus())) {
             throw new BusinessException("已报废设备只读，不能修改");
         }
         assertUnique(dto.getAssetNo(), dto.getSerialNo(), id);
+        String summary = operator == null ? null : changeSummary(asset, dto);
         fill(asset, dto);
         assetDao.updateById(asset);
+        if (operator != null) {
+            writeAudit(operator, asset.getAssetNo(), "UPDATE", summary);
+        }
         return toVo(assetDao.selectById(id), true);
     }
 
     @Override
     @Transactional
     public void remove(Long id) {
+        remove(null, id);
+    }
+
+    @Override
+    @Transactional
+    public void remove(AuthUser operator, Long id) {
         AssetDO asset = requireAsset(id);
         if (!AssetStatus.IN_STOCK.name().equals(asset.getStatus())) {
             throw new BusinessException("仅在库且无领用记录的设备可删除");
@@ -122,8 +154,13 @@ public class AssetServiceImpl implements AssetService {
         if (count != null && count > 0) {
             throw new BusinessException("仅在库且无领用记录的设备可删除");
         }
+        String assetNo = asset.getAssetNo();
+        String name = asset.getName();
         assetFileService.deleteAll(id);
         assetDao.deleteById(id);
+        if (operator != null) {
+            writeAudit(operator, assetNo, "DELETE", "删除设备 " + assetNo + " " + name);
+        }
     }
 
     @Override
@@ -445,6 +482,87 @@ public class AssetServiceImpl implements AssetService {
         } catch (Exception ex) {
             return status;
         }
+    }
+
+    private String changeSummary(AssetDO before, AssetSaveDTO dto) {
+        List<String> parts = new ArrayList<>();
+        diff(parts, "资产编号", before.getAssetNo(), trim(dto.getAssetNo()));
+        diff(parts, "名称", before.getName(), trim(dto.getName()));
+        diff(parts, "类型", categoryName(before.getCategoryId()), categoryName(dto.getCategoryId()));
+        diff(parts, "品牌", before.getBrand(), blankToNull(dto.getBrand()));
+        diff(parts, "型号", before.getModel(), blankToNull(dto.getModel()));
+        diff(parts, "序列号", before.getSerialNo(), blankToNull(dto.getSerialNo()));
+        diff(parts, "购置日期", text(before.getPurchaseDate()), text(dto.getPurchaseDate()));
+        diff(parts, "购置价格", money(before.getPurchasePrice()), money(dto.getPurchasePrice()));
+        diff(parts, "供应商", before.getSupplier(), blankToNull(dto.getSupplier()));
+        diff(parts, "保修截止", text(before.getWarrantyUntil()), text(dto.getWarrantyUntil()));
+        diff(parts, "责任部门", deptName(before.getDeptId()), deptName(dto.getDeptId()));
+        diff(parts, "存放地点", locationName(before.getLocationId()), locationName(dto.getLocationId()));
+        diff(parts, "备注", before.getRemark(), blankToNull(dto.getRemark()));
+        String assetNo = trim(dto.getAssetNo());
+        if (parts.isEmpty()) {
+            return "修改设备 " + assetNo + "，字段未变化";
+        }
+        return "修改设备 " + assetNo + "：" + String.join("；", parts);
+    }
+
+    private void diff(List<String> parts, String label, String before, String after) {
+        String left = before == null ? "" : before;
+        String right = after == null ? "" : after;
+        if (left.equals(right)) {
+            return;
+        }
+        parts.add(label + "由「" + shown(left) + "」改为「" + shown(right) + "」");
+    }
+
+    private String shown(String value) {
+        return value.isEmpty() ? "空" : value;
+    }
+
+    private String categoryName(Long id) {
+        if (id == null) {
+            return null;
+        }
+        AssetCategoryDO category = assetCategoryDao.selectById(id);
+        return category == null ? null : category.getName();
+    }
+
+    private String deptName(Long id) {
+        if (id == null) {
+            return null;
+        }
+        SysDeptDO dept = sysDeptDao.selectById(id);
+        return dept == null ? null : dept.getName();
+    }
+
+    private String locationName(Long id) {
+        if (id == null) {
+            return null;
+        }
+        SysLocationDO location = sysLocationDao.selectById(id);
+        return location == null ? null : location.getName();
+    }
+
+    private String text(LocalDate date) {
+        return date == null ? null : date.toString();
+    }
+
+    private String money(BigDecimal value) {
+        return value == null ? null : value.stripTrailingZeros().toPlainString();
+    }
+
+    private String trim(String value) {
+        return value == null ? null : value.trim();
+    }
+
+    private void writeAudit(AuthUser operator, String assetNo, String action, String summary) {
+        AuditLogDO log = new AuditLogDO();
+        log.setOperatorId(operator.getUserId());
+        log.setModule("ASSET");
+        log.setAction(action);
+        log.setObjectNo(assetNo);
+        log.setSummary(StrUtil.sub(summary, 0, 500));
+        auditLogDao.insert(log);
     }
 
     private String blankToNull(String value) {
