@@ -1,7 +1,7 @@
 import http from './http'
 import type { PageResult, Result, SiteMessage } from '@/types/api'
 
-export function listMessages(params: { box?: string; page?: number; pageSize?: number }) {
+export function listMessages(params: { box?: string; msgType?: string; page?: number; pageSize?: number }) {
   return http.get<Result<PageResult<SiteMessage>>>('/messages', { params })
 }
 

@@ -23,7 +23,22 @@ const total = ref(0)
 const page = ref(1)
 const openId = ref<number | null>(null)
 
+const messageTypes = [
+  { value: 'PENDING_APPROVAL', label: '待审批' },
+  { value: 'APPROVAL_RESULT', label: '审批结果' },
+  { value: 'ISSUE', label: '发放' },
+  { value: 'RETURN_CONFIRM', label: '归还确认' },
+  { value: 'RENEW_RESULT', label: '续借结果' },
+  { value: 'DUE_REMIND', label: '到期提醒' },
+  { value: 'OVERDUE_REMIND', label: '逾期提醒' },
+  { value: 'IMPORT_RESULT', label: '导入结果' },
+]
+
 const box = computed(() => (route.query.box === 'unread' ? 'unread' : 'all'))
+const msgType = computed(() => {
+  const value = route.query.type
+  return typeof value === 'string' && messageTypes.some((item) => item.value === value) ? value : ''
+})
 
 function formatTime(value?: string) {
   if (!value) return ''
@@ -40,9 +55,22 @@ function deviceRows(content: string): DeviceRow[] | null {
   })
 }
 
+function replaceQuery(nextBox: string, nextType: string) {
+  router.replace({
+    name: 'messages',
+    query: {
+      box: nextBox === 'unread' ? 'unread' : undefined,
+      type: nextType || undefined,
+    },
+  })
+}
+
 function switchBox(next: string | number | boolean | undefined) {
-  const value = next === 'unread' ? 'unread' : 'all'
-  router.replace({ name: 'messages', query: value === 'unread' ? { box: 'unread' } : {} })
+  replaceQuery(next === 'unread' ? 'unread' : 'all', msgType.value)
+}
+
+function switchType(next: string | undefined) {
+  replaceQuery(box.value, next || '')
 }
 
 async function load() {
@@ -50,6 +78,7 @@ async function load() {
   try {
     const { data } = await listMessages({
       box: box.value === 'unread' ? 'unread' : undefined,
+      msgType: msgType.value || undefined,
       page: page.value,
       pageSize: 20,
     })
@@ -92,7 +121,7 @@ async function markAll() {
   }
 }
 
-watch(() => route.query.box, () => {
+watch(() => [route.query.box, route.query.type], () => {
   page.value = 1
   load()
 }, { immediate: true })
@@ -101,10 +130,21 @@ watch(() => route.query.box, () => {
 <template>
   <div class="page" v-loading="loading">
     <div class="page-toolbar">
-      <el-radio-group :model-value="box" @change="switchBox">
-        <el-radio-button value="all">全部</el-radio-button>
-        <el-radio-button value="unread">未读</el-radio-button>
-      </el-radio-group>
+      <div class="toolbar-filters">
+        <el-radio-group :model-value="box" @change="switchBox">
+          <el-radio-button value="all">全部</el-radio-button>
+          <el-radio-button value="unread">未读</el-radio-button>
+        </el-radio-group>
+        <el-select
+          :model-value="msgType"
+          clearable
+          placeholder="全部类型"
+          style="width: 160px"
+          @change="switchType"
+        >
+          <el-option v-for="item in messageTypes" :key="item.value" :label="item.label" :value="item.value" />
+        </el-select>
+      </div>
       <el-button :disabled="messages.unread === 0" :loading="markingAll" @click="markAll">全部已读</el-button>
     </div>
 
@@ -156,6 +196,12 @@ watch(() => route.query.box, () => {
 </template>
 
 <style scoped>
+.toolbar-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .msg-list {
   display: flex;
   flex-direction: column;

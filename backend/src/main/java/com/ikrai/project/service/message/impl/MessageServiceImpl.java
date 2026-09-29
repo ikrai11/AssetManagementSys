@@ -1,6 +1,7 @@
 package com.ikrai.project.service.message.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ikrai.project.common.AuthUser;
@@ -38,6 +39,15 @@ public class MessageServiceImpl implements MessageService {
             wrapper.eq(SiteMessageDO::getReadFlag, 0);
         } else if ("read".equals(query.getBox())) {
             wrapper.eq(SiteMessageDO::getReadFlag, 1);
+        }
+        if (StrUtil.isNotBlank(query.getMsgType())) {
+            String type = query.getMsgType().trim();
+            try {
+                MessageType.valueOf(type);
+            } catch (IllegalArgumentException ex) {
+                throw new BusinessException("不支持的消息类型");
+            }
+            wrapper.eq(SiteMessageDO::getMsgType, type);
         }
         wrapper.orderByDesc(SiteMessageDO::getCreatedAt).orderByDesc(SiteMessageDO::getId);
         Page<SiteMessageDO> result = siteMessageDao.selectPage(new Page<>(page, pageSize), wrapper);
