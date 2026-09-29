@@ -3,10 +3,12 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { approveBorrow, approveRenew, confirmReturn, issueBorrow, listTodos, rejectBorrow, rejectRenew } from '@/api/borrow'
+import { useMessageStore } from '@/stores/message'
 import { borrowTagType } from '@/utils/status'
 import type { BorrowOrder, BorrowRenew, BorrowTodos } from '@/types/api'
 
 const router = useRouter()
+const messages = useMessageStore()
 const loading = ref(false)
 const tab = ref('pending')
 const todos = ref<BorrowTodos>({ pending: [], approved: [], returnPending: [], renewPending: [] })
@@ -25,10 +27,15 @@ async function load() {
   }
 }
 
+async function finish() {
+  await load()
+  await messages.refresh()
+}
+
 async function approve(row: BorrowOrder) {
   await approveBorrow(row.id)
   ElMessage.success('已通过，设备仍为审批中，待发放')
-  await load()
+  await finish()
 }
 
 async function reject(row: BorrowOrder) {
@@ -38,14 +45,14 @@ async function reject(row: BorrowOrder) {
   })
   await rejectBorrow(row.id, value)
   ElMessage.success('已驳回')
-  await load()
+  await finish()
 }
 
 async function issue(row: BorrowOrder) {
   await ElMessageBox.confirm(`确认将 ${row.assetNo} 发放给 ${row.applicantName}？发放后设备变为已领用。`, '确认发放')
   await issueBorrow(row.id)
   ElMessage.success('已发放')
-  await load()
+  await finish()
 }
 
 async function confirm(row: BorrowOrder) {
@@ -54,13 +61,13 @@ async function confirm(row: BorrowOrder) {
   }).catch(() => ({ value: '' }))
   await confirmReturn(row.id, value)
   ElMessage.success('已归还，设备回到在库')
-  await load()
+  await finish()
 }
 
 async function passRenew(row: BorrowRenew) {
   await approveRenew(row.id)
   ElMessage.success('续借已通过，预计归还日已更新')
-  await load()
+  await finish()
 }
 
 async function denyRenew(row: BorrowRenew) {
@@ -70,7 +77,7 @@ async function denyRenew(row: BorrowRenew) {
   })
   await rejectRenew(row.id, value)
   ElMessage.success('已驳回，原预计归还日不变')
-  await load()
+  await finish()
 }
 
 onMounted(load)

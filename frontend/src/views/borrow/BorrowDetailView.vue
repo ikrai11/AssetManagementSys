@@ -4,11 +4,13 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { applyRenew, approveBorrow, approveRenew, confirmReturn, getBorrow, issueBorrow, rejectBorrow, rejectRenew, requestReturn, submitBorrow, withdrawBorrow } from '@/api/borrow'
 import { useAuthStore } from '@/stores/auth'
+import { useMessageStore } from '@/stores/message'
 import { actionLabel, borrowTagType } from '@/utils/status'
 import type { BorrowOrder } from '@/types/api'
 
 const route = useRoute()
 const auth = useAuthStore()
+const messages = useMessageStore()
 const loading = ref(false)
 const order = ref<BorrowOrder>()
 const renewOpen = ref(false)
@@ -31,6 +33,7 @@ async function run(action: () => Promise<unknown>, success: string) {
   await action()
   ElMessage.success(success)
   await load()
+  await messages.refresh()
 }
 
 async function reject() {

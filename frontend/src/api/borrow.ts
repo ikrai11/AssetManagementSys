@@ -19,8 +19,8 @@ export function getBorrow(id: number) {
   return http.get<Result<BorrowOrder>>(`/borrows/${id}`)
 }
 
-export function listTodos() {
-  return http.get<Result<BorrowTodos>>('/borrows/todos')
+export function listTodos(silent = false) {
+  return http.get<Result<BorrowTodos>>('/borrows/todos', silent ? { skipErrorMessage: true } : undefined)
 }
 
 export function submitBorrow(id: number) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Bell, Box, Document, DocumentChecked, House, Lock, Message, Notebook, OfficeBuilding, Setting, SwitchButton, Tickets, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
@@ -43,6 +43,11 @@ onMounted(() => {
     auth.fetchMe()
   }
   messages.refresh()
+  messages.startPolling()
+})
+
+onUnmounted(() => {
+  messages.stopPolling()
 })
 
 watch(() => route.fullPath, () => {

@@ -2,11 +2,13 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { listBorrows, requestReturn, withdrawBorrow } from '@/api/borrow'
+import { useMessageStore } from '@/stores/message'
 import { borrowTagType } from '@/utils/status'
 import type { BorrowOrder } from '@/types/api'
 
 const router = useRouter()
 const route = useRoute()
+const messages = useMessageStore()
 const loading = ref(false)
 const tab = ref(typeof route.query.tab === 'string' ? route.query.tab : 'active')
 const all = ref<BorrowOrder[]>([])
@@ -32,11 +34,13 @@ async function load() {
 async function withdraw(row: BorrowOrder) {
   await withdrawBorrow(row.id)
   await load()
+  await messages.refresh()
 }
 
 async function applyReturn(row: BorrowOrder) {
   await requestReturn(row.id)
   await load()
+  await messages.refresh()
 }
 
 onMounted(load)

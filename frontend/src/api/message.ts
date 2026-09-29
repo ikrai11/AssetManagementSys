@@ -5,8 +5,8 @@ export function listMessages(params: { box?: string; msgType?: string; page?: nu
   return http.get<Result<PageResult<SiteMessage>>>('/messages', { params })
 }
 
-export function unreadCount() {
-  return http.get<Result<number>>('/messages/unread-count')
+export function unreadCount(silent = false) {
+  return http.get<Result<number>>('/messages/unread-count', silent ? { skipErrorMessage: true } : undefined)
 }
 
 export function markMessagesRead(payload: { ids?: number[]; all?: boolean }) {

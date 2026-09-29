@@ -1,14 +1,18 @@
 import http from './http'
 import type { Result, StatsNameCount, StatsOverview, StatsTrend } from '@/types/api'
 
-export function getOverview() {
-  return http.get<Result<StatsOverview>>('/stats/overview')
+function quiet(silent: boolean) {
+  return silent ? { skipErrorMessage: true } : undefined
 }
 
-export function getByCategory() {
-  return http.get<Result<StatsNameCount[]>>('/stats/by-category')
+export function getOverview(silent = false) {
+  return http.get<Result<StatsOverview>>('/stats/overview', quiet(silent))
 }
 
-export function getBorrowTrend() {
-  return http.get<Result<StatsTrend[]>>('/stats/borrow-trend')
+export function getByCategory(silent = false) {
+  return http.get<Result<StatsNameCount[]>>('/stats/by-category', quiet(silent))
+}
+
+export function getBorrowTrend(silent = false) {
+  return http.get<Result<StatsTrend[]>>('/stats/borrow-trend', quiet(silent))
 }

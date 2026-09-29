@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { EChartsCoreOption } from 'echarts'
 import { getBorrowTrend, getByCategory, getOverview } from '@/api/stats'
 import { listTodos } from '@/api/borrow'
 import AmsChart from '@/components/AmsChart.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useMessageStore } from '@/stores/message'
 import type { BorrowOrder, StatsNameCount, StatsOverview, StatsTrend } from '@/types/api'
+
+const POLL_MS = 10_000
 
 const router = useRouter()
 const auth = useAuthStore()
+const messages = useMessageStore()
 const loading = ref(false)
 const overview = ref<StatsOverview | null>(null)
 const categories = ref<StatsNameCount[]>([])
@@ -105,27 +109,56 @@ const trendOption = computed<EChartsCoreOption | null>(() => {
   }
 })
 
-async function load() {
-  loading.value = true
+async function load(silent = false) {
+  if (!silent) loading.value = true
   try {
     const [overviewRes, categoryRes, trendRes] = await Promise.all([
-      getOverview(),
-      getByCategory(),
-      getBorrowTrend(),
+      getOverview(silent),
+      getByCategory(silent),
+      getBorrowTrend(silent),
     ])
     overview.value = overviewRes.data.data
     categories.value = categoryRes.data.data
     trend.value = trendRes.data.data
     if (isAdmin.value) {
-      const todoRes = await listTodos()
+      const todoRes = await listTodos(silent)
       todos.value = todoRes.data.data.pending.slice(0, 8)
     }
+    if (silent) {
+      await messages.refresh()
+    }
+  } catch (error) {
+    if (silent) return
+    throw error
   } finally {
-    loading.value = false
+    if (!silent) loading.value = false
   }
 }
 
-onMounted(load)
+function onVisible() {
+  if (document.visibilityState === 'visible') {
+    void load(true)
+  }
+}
+
+let timer: number | undefined
+
+onMounted(() => {
+  void load()
+  document.addEventListener('visibilitychange', onVisible)
+  timer = window.setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      void load(true)
+    }
+  }, POLL_MS)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', onVisible)
+  if (timer !== undefined) {
+    window.clearInterval(timer)
+  }
+})
 </script>
 
 <template>

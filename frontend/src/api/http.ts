@@ -37,6 +37,13 @@ http.interceptors.response.use(
   },
   async (error) => {
     const status = error.response?.status
+    if (status === 401) {
+      useAuthStore().clear()
+      if (router.currentRoute.value.name !== 'login') {
+        router.push({ name: 'login', query: { redirect: router.currentRoute.value.fullPath } })
+      }
+      return Promise.reject(error)
+    }
     let message = '请求失败'
     const payload = error.response?.data
     if (error.config?.skipErrorMessage) {
@@ -52,12 +59,7 @@ http.interceptors.response.use(
     } else if (payload && typeof payload === 'object' && 'message' in payload) {
       message = String((payload as Result<unknown>).message || message)
     }
-    if (status === 401) {
-      useAuthStore().clear()
-      if (router.currentRoute.value.name !== 'login') {
-        router.push({ name: 'login', query: { redirect: router.currentRoute.value.fullPath } })
-      }
-    } else if (status === 403) {
+    if (status === 403) {
       router.push({ name: 'forbidden' })
     } else if (status === 400 || status === 409) {
       ElMessage.error(message)

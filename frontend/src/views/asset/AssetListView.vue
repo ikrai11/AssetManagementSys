@@ -6,6 +6,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { downloadImportFailures, downloadImportTemplate, exportAssets, importAssets, listAssets, removeAsset } from '@/api/asset'
 import { listCategories, listDepts, listLocations } from '@/api/dict'
 import { useAuthStore } from '@/stores/auth'
+import { useMessageStore } from '@/stores/message'
 import { assetTagClass, assetTagType } from '@/utils/status'
 import type { AssetImportResult, AssetItem, DictItem } from '@/types/api'
 import type { UploadFile } from 'element-plus'
@@ -13,6 +14,7 @@ import type { UploadFile } from 'element-plus'
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const messages = useMessageStore()
 const loading = ref(false)
 const moreFilters = ref(false)
 const list = ref<AssetItem[]>([])
@@ -203,6 +205,7 @@ async function submitImport() {
     importResult.value = data.data
     ElMessage.success(`导入完成：成功 ${data.data.successCount}，失败 ${data.data.failCount}`)
     await load()
+    await messages.refresh()
   } catch (error) {
     if (error instanceof Error && error.message) {
       ElMessage.error(error.message)
