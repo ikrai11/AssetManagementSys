@@ -20,7 +20,6 @@ import com.ikrai.project.dataobject.AuditLogDO;
 import com.ikrai.project.dataobject.SysDeptDO;
 import com.ikrai.project.dataobject.SysLocationDO;
 import com.ikrai.project.dto.AssetSaveDTO;
-import com.ikrai.project.excel.AssetExportRow;
 import com.ikrai.project.excel.AssetFailRow;
 import com.ikrai.project.excel.AssetImportRow;
 import com.ikrai.project.manager.message.MessageManager;
@@ -42,6 +41,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -170,6 +170,7 @@ public class AssetExcelServiceImpl implements AssetExcelService {
 
     @Override
     public byte[] exportAssets(AssetQuery query, AuthUser operator) {
+        List<Column> columns = resolveColumns(query.getFields());
         long total = assetService.count(query, operator);
         if (total <= 0) {
             throw new BusinessException("没有可导出的设备");
@@ -178,11 +179,92 @@ public class AssetExcelServiceImpl implements AssetExcelService {
         if (total > maxRows) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "导出超过上限，请缩小筛选范围");
         }
-        List<AssetExportRow> rows = assetService.listAll(query, operator).stream()
-                .map(this::toExportRow)
+        List<AssetVO> assets = assetService.listAll(query, operator);
+        audit(operator, "EXPORT", null, "导出 " + assets.size() + " 台设备");
+        return writeSelected(assets, columns);
+    }
+
+    private List<Column> resolveColumns(List<String> requested) {
+        if (requested == null) {
+            return Arrays.stream(Column.values()).filter(Column::listed).toList();
+        }
+        List<String> keys = requested.stream().map(StrUtil::trim).filter(StrUtil::isNotBlank).toList();
+        if (keys.isEmpty()) {
+            throw new BusinessException("请至少选择一个导出字段");
+        }
+        for (String key : keys) {
+            boolean known = Arrays.stream(Column.values()).anyMatch(column -> column.key.equals(key));
+            if (!known) {
+                throw new BusinessException("不支持的导出字段");
+            }
+        }
+        return Arrays.stream(Column.values()).filter(column -> keys.contains(column.key)).toList();
+    }
+
+    private byte[] writeSelected(List<AssetVO> assets, List<Column> columns) {
+        List<List<String>> head = columns.stream().map(column -> List.of(column.label)).toList();
+        List<List<String>> data = assets.stream()
+                .map(asset -> columns.stream().map(column -> cell(column, asset)).toList())
                 .toList();
-        audit(operator, "EXPORT", null, "导出 " + rows.size() + " 台设备");
-        return write(AssetExportRow.class, "设备台账", rows);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        EasyExcel.write(out).head(head).sheet("设备台账").doWrite(data);
+        return out.toByteArray();
+    }
+
+    private String cell(Column column, AssetVO asset) {
+        return switch (column) {
+            case ASSET_NO -> asset.getAssetNo();
+            case NAME -> asset.getName();
+            case CATEGORY -> asset.getCategoryName();
+            case STATUS -> asset.isOverdue() ? "已逾期" : asset.getStatusLabel();
+            case LOCATION -> asset.getLocationName();
+            case HOLDER -> asset.getHolderName();
+            case BORROW_START -> stringify(asset.getBorrowStartDate());
+            case EXPECTED_RETURN -> stringify(asset.getExpectedReturnDate());
+            case BRAND -> asset.getBrand();
+            case MODEL -> asset.getModel();
+            case SERIAL_NO -> asset.getSerialNo();
+            case PURCHASE_DATE -> stringify(asset.getPurchaseDate());
+            case PURCHASE_PRICE -> asset.getPurchasePrice() == null ? null : asset.getPurchasePrice().toPlainString();
+            case SUPPLIER -> asset.getSupplier();
+            case WARRANTY -> stringify(asset.getWarrantyUntil());
+            case DEPT -> asset.getDeptName();
+            case REMARK -> asset.getRemark();
+        };
+    }
+
+    private enum Column {
+        ASSET_NO("assetNo", "资产编号", true),
+        NAME("name", "名称", true),
+        CATEGORY("categoryName", "类型", true),
+        STATUS("status", "状态", true),
+        LOCATION("locationName", "存放地点", true),
+        HOLDER("holderName", "领用人", true),
+        BORROW_START("borrowStartDate", "领用时间", true),
+        EXPECTED_RETURN("expectedReturnDate", "预计归还日", true),
+        BRAND("brand", "品牌", false),
+        MODEL("model", "型号", false),
+        SERIAL_NO("serialNo", "序列号", false),
+        PURCHASE_DATE("purchaseDate", "购置日期", false),
+        PURCHASE_PRICE("purchasePrice", "购置价格", false),
+        SUPPLIER("supplier", "供应商", false),
+        WARRANTY("warrantyUntil", "保修截止日期", false),
+        DEPT("deptName", "责任部门", false),
+        REMARK("remark", "备注", false);
+
+        private final String key;
+        private final String label;
+        private final boolean listed;
+
+        Column(String key, String label, boolean listed) {
+            this.key = key;
+            this.label = label;
+            this.listed = listed;
+        }
+
+        private boolean listed() {
+            return listed;
+        }
     }
 
     private void saveRow(AssetImportRow row, Map<String, Integer> assetNoCount, Map<String, Integer> serialCount) {
@@ -326,28 +408,6 @@ public class AssetExcelServiceImpl implements AssetExcelService {
 
     private String trim(String value) {
         return StrUtil.trimToNull(value);
-    }
-
-    private AssetExportRow toExportRow(AssetVO asset) {
-        AssetExportRow row = new AssetExportRow();
-        row.setAssetNo(asset.getAssetNo());
-        row.setName(asset.getName());
-        row.setCategoryName(asset.getCategoryName());
-        row.setBrand(asset.getBrand());
-        row.setModel(asset.getModel());
-        row.setSerialNo(asset.getSerialNo());
-        row.setStatusLabel(asset.isOverdue() ? "已逾期" : asset.getStatusLabel());
-        row.setPurchaseDate(stringify(asset.getPurchaseDate()));
-        row.setPurchasePrice(asset.getPurchasePrice() == null ? null : asset.getPurchasePrice().toPlainString());
-        row.setSupplier(asset.getSupplier());
-        row.setWarrantyUntil(stringify(asset.getWarrantyUntil()));
-        row.setDeptName(asset.getDeptName());
-        row.setLocationName(asset.getLocationName());
-        row.setHolderName(asset.getHolderName());
-        row.setBorrowStartDate(stringify(asset.getBorrowStartDate()));
-        row.setExpectedReturnDate(stringify(asset.getExpectedReturnDate()));
-        row.setRemark(asset.getRemark());
-        return row;
     }
 
     private String stringify(LocalDate date) {

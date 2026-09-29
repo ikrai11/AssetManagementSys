@@ -36,6 +36,33 @@ const query = reactive({
 const isAdmin = computed(() => auth.role === 'ADMIN')
 const importing = ref(false)
 const exporting = ref(false)
+const exportVisible = ref(false)
+
+const exportColumns = [
+  { key: 'assetNo', label: '资产编号', listed: true },
+  { key: 'name', label: '名称', listed: true },
+  { key: 'categoryName', label: '类型', listed: true },
+  { key: 'status', label: '状态', listed: true },
+  { key: 'locationName', label: '存放地点', listed: true },
+  { key: 'holderName', label: '领用人', listed: true },
+  { key: 'borrowStartDate', label: '领用时间', listed: true },
+  { key: 'expectedReturnDate', label: '预计归还日', listed: true },
+  { key: 'brand', label: '品牌', listed: false },
+  { key: 'model', label: '型号', listed: false },
+  { key: 'serialNo', label: '序列号', listed: false },
+  { key: 'purchaseDate', label: '购置日期', listed: false },
+  { key: 'purchasePrice', label: '购置价格', listed: false },
+  { key: 'supplier', label: '供应商', listed: false },
+  { key: 'warrantyUntil', label: '保修截止日期', listed: false },
+  { key: 'deptName', label: '责任部门', listed: false },
+  { key: 'remark', label: '备注', listed: false },
+]
+
+function listedExportFields() {
+  return exportColumns.filter((item) => item.listed).map((item) => item.key)
+}
+
+const exportFields = ref<string[]>(listedExportFields())
 const importVisible = ref(false)
 const importFile = ref<File>()
 const importResult = ref<AssetImportResult | null>(null)
@@ -193,10 +220,27 @@ async function downloadFails() {
   await downloadImportFailures()
 }
 
-async function exportCurrent() {
+function openExport() {
+  exportVisible.value = true
+}
+
+function selectDefaultFields() {
+  exportFields.value = listedExportFields()
+}
+
+function selectAllFields() {
+  exportFields.value = exportColumns.map((item) => item.key)
+}
+
+async function confirmExport() {
+  if (exportFields.value.length === 0) {
+    ElMessage.warning('请至少选择一个导出字段')
+    return
+  }
   exporting.value = true
   try {
-    await exportAssets(currentFilter())
+    await exportAssets({ ...currentFilter(), fields: [...exportFields.value] })
+    exportVisible.value = false
     ElMessage.success('已开始下载')
   } catch (error) {
     if (error instanceof Error && error.message) {
@@ -295,9 +339,26 @@ watch(() => [query.page, query.pageSize], () => load())
         新建设备
       </el-button>
       <el-button v-if="isAdmin" @click="openImport">导入</el-button>
-      <el-button v-if="isAdmin" :loading="exporting" @click="exportCurrent">导出</el-button>
+      <el-button v-if="isAdmin" :loading="exporting" @click="openExport">导出</el-button>
       <span v-else class="toolbar-hint">仅展示在库设备与本人相关设备</span>
     </div>
+
+    <el-dialog v-model="exportVisible" title="导出字段" width="560px">
+      <p class="import-hint">默认勾选列表上能看到的列。范围仍是当前筛选，不受当前页限制。购置价格只有勾选后才会出现在文件里。</p>
+      <div class="export-tools">
+        <el-button link type="primary" @click="selectDefaultFields">恢复默认</el-button>
+        <el-button link type="primary" @click="selectAllFields">全选</el-button>
+      </div>
+      <el-checkbox-group v-model="exportFields" class="export-fields">
+        <el-checkbox v-for="item in exportColumns" :key="item.key" :value="item.key">{{ item.label }}</el-checkbox>
+      </el-checkbox-group>
+      <template #footer>
+        <el-button @click="exportVisible = false">取消</el-button>
+        <el-button type="primary" :loading="exporting" :disabled="exportFields.length === 0" @click="confirmExport">
+          导出
+        </el-button>
+      </template>
+    </el-dialog>
 
     <el-dialog v-model="importVisible" title="导入设备" width="640px" destroy-on-close>
       <p class="import-hint">先下载模板，按表头填写。第二行示例（资产编号 EXAMPLE）不会入库。单次最多 2000 行。</p>
@@ -393,6 +454,18 @@ watch(() => [query.page, query.pageSize], () => load())
 .toolbar-hint {
   color: var(--ams-text-secondary);
   font-size: 13px;
+}
+
+.export-tools {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.export-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
 }
 
 .import-hint {

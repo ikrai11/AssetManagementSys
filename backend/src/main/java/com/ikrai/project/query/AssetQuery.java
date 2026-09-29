@@ -18,6 +18,7 @@ public class AssetQuery {
     private Long holderUserId;
     private Long deptId;
     private Long locationId;
+    private List<String> fields;
     private Integer page = 1;
     private Integer pageSize = 20;
 }

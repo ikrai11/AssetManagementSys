@@ -114,6 +114,12 @@ const router = createRouter({
           meta: { role: 'ADMIN', title: '系统参数' },
         },
         {
+          path: 'audit-logs',
+          name: 'audit-logs',
+          component: () => import('@/views/system/AuditLogView.vue'),
+          meta: { role: 'ADMIN', title: '审计日志' },
+        },
+        {
           path: 'mail-records',
           name: 'mail-records',
           component: () => import('@/views/system/MailRecordView.vue'),

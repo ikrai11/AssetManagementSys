@@ -254,6 +254,29 @@ export interface OrgSavePayload {
   enabled: boolean
 }
 
+export interface AuditLog {
+  id: number
+  operatorId: number
+  operatorName: string
+  module: string
+  moduleLabel: string
+  action: string
+  actionLabel: string
+  objectNo?: string
+  summary?: string
+  createdAt?: string
+}
+
+export interface AuditQuery {
+  from?: string
+  to?: string
+  module?: string
+  objectNo?: string
+  operator?: string
+  page?: number
+  pageSize?: number
+}
+
 export interface AssetQuery {
   categoryIds?: number[]
   statuses?: string[]
@@ -264,6 +287,7 @@ export interface AssetQuery {
   borrowStartTo?: string
   dueFrom?: string
   dueTo?: string
+  fields?: string[]
   page?: number
   pageSize?: number
 }

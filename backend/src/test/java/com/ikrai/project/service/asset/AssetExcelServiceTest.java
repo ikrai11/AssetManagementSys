@@ -1,6 +1,8 @@
 package com.ikrai.project.service.asset;
 
 import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.context.AnalysisContext;
+import com.alibaba.excel.event.AnalysisEventListener;
 import com.ikrai.project.common.AuthUser;
 import com.ikrai.project.common.enums.AssetStatus;
 import com.ikrai.project.common.enums.UserRole;
@@ -16,7 +18,6 @@ import com.ikrai.project.dataobject.AuditLogDO;
 import com.ikrai.project.dataobject.SiteMessageDO;
 import com.ikrai.project.dataobject.SysUserDO;
 import com.ikrai.project.dto.AssetSaveDTO;
-import com.ikrai.project.excel.AssetExportRow;
 import com.ikrai.project.excel.AssetImportRow;
 import com.ikrai.project.query.AssetQuery;
 import com.ikrai.project.vo.AssetImportVO;
@@ -35,7 +36,9 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -178,12 +181,13 @@ class AssetExcelServiceTest {
     }
 
     @Test
-    void exportUsesCurrentFilterAndIncludesPurchasePrice() {
+    void exportUsesCurrentFilterAndDefaultsToVisibleColumns() {
         AssetSaveDTO match = new AssetSaveDTO();
         match.setAssetNo("EXP-A-" + SEQ.getAndIncrement());
         match.setName("导出匹配");
         match.setCategoryId(assetCategoryDao.selectById(1L).getId());
         match.setPurchasePrice(new BigDecimal("1999.00"));
+        match.setBrand("联想");
         AssetVO saved = assetService.save(match);
 
         AssetSaveDTO other = new AssetSaveDTO();
@@ -194,17 +198,81 @@ class AssetExcelServiceTest {
 
         AssetQuery query = new AssetQuery();
         query.setKeyword(saved.getAssetNo());
-        byte[] bytes = assetExcelService.exportAssets(query, admin);
-        List<AssetExportRow> rows = EasyExcel.read(new ByteArrayInputStream(bytes))
-                .head(AssetExportRow.class)
-                .sheet()
-                .doReadSync();
-        assertEquals(1, rows.size());
-        assertEquals(saved.getAssetNo(), rows.get(0).getAssetNo());
-        assertEquals("1999.00", rows.get(0).getPurchasePrice());
+        Sheet sheet = readSheet(assetExcelService.exportAssets(query, admin));
+        assertEquals(List.of("资产编号", "名称", "类型", "状态", "存放地点", "领用人", "领用时间", "预计归还日"), sheet.headers());
+        assertEquals(1, sheet.rows().size());
+        assertEquals(saved.getAssetNo(), sheet.rows().get(0).get("资产编号"));
+        assertEquals("导出匹配", sheet.rows().get(0).get("名称"));
         assertTrue(auditLogDao.selectCount(com.baomidou.mybatisplus.core.toolkit.Wrappers.<AuditLogDO>lambdaQuery()
                 .eq(AuditLogDO::getAction, "EXPORT")
                 .eq(AuditLogDO::getOperatorId, admin.getUserId())) >= 1);
+    }
+
+    @Test
+    void exportSelectedFieldsIncludePurchasePrice() {
+        AssetSaveDTO dto = new AssetSaveDTO();
+        dto.setAssetNo("EXP-P-" + SEQ.getAndIncrement());
+        dto.setName("含价格");
+        dto.setCategoryId(assetCategoryDao.selectById(1L).getId());
+        dto.setPurchasePrice(new BigDecimal("1999.00"));
+        dto.setBrand("戴尔");
+        AssetVO saved = assetService.save(dto);
+
+        AssetQuery query = new AssetQuery();
+        query.setKeyword(saved.getAssetNo());
+        query.setFields(List.of("purchasePrice", "assetNo", "brand"));
+        Sheet sheet = readSheet(assetExcelService.exportAssets(query, admin));
+        assertEquals(List.of("资产编号", "品牌", "购置价格"), sheet.headers());
+        assertEquals(saved.getAssetNo(), sheet.rows().get(0).get("资产编号"));
+        assertEquals("戴尔", sheet.rows().get(0).get("品牌"));
+        assertEquals("1999.00", sheet.rows().get(0).get("购置价格"));
+    }
+
+    @Test
+    void exportRejectsUnknownOrEmptyFields() {
+        AssetQuery unknown = new AssetQuery();
+        unknown.setFields(List.of("assetNo", "secret"));
+        BusinessException unknownEx = assertThrows(BusinessException.class,
+                () -> assetExcelService.exportAssets(unknown, admin));
+        assertEquals("不支持的导出字段", unknownEx.getMessage());
+
+        AssetQuery empty = new AssetQuery();
+        empty.setFields(List.of(" ", ""));
+        BusinessException emptyEx = assertThrows(BusinessException.class,
+                () -> assetExcelService.exportAssets(empty, admin));
+        assertEquals("请至少选择一个导出字段", emptyEx.getMessage());
+    }
+
+    private Sheet readSheet(byte[] bytes) {
+        List<String> headers = new ArrayList<>();
+        List<Map<String, String>> rows = new ArrayList<>();
+        EasyExcel.read(new ByteArrayInputStream(bytes), new AnalysisEventListener<Map<Integer, String>>() {
+            @Override
+            public void invokeHeadMap(Map<Integer, String> headMap, AnalysisContext context) {
+                headMap.entrySet().stream()
+                        .sorted(Map.Entry.comparingByKey())
+                        .forEach(entry -> headers.add(entry.getValue()));
+            }
+
+            @Override
+            public void invoke(Map<Integer, String> data, AnalysisContext context) {
+                Map<String, String> row = new LinkedHashMap<>();
+                data.forEach((index, value) -> {
+                    if (index < headers.size()) {
+                        row.put(headers.get(index), value);
+                    }
+                });
+                rows.add(row);
+            }
+
+            @Override
+            public void doAfterAllAnalysed(AnalysisContext context) {
+            }
+        }).sheet().doRead();
+        return new Sheet(headers, rows);
+    }
+
+    private record Sheet(List<String> headers, List<Map<String, String>> rows) {
     }
 
     private long countByPrefix(String prefix) {
