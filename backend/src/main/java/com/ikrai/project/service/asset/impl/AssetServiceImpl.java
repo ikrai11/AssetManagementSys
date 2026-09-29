@@ -267,9 +267,37 @@ public class AssetServiceImpl implements AssetService {
         asset.setPurchasePrice(dto.getPurchasePrice());
         asset.setSupplier(blankToNull(dto.getSupplier()));
         asset.setWarrantyUntil(dto.getWarrantyUntil());
+        assertDeptSelectable(dto.getDeptId(), asset.getDeptId());
+        assertLocationSelectable(dto.getLocationId(), asset.getLocationId());
         asset.setDeptId(dto.getDeptId());
         asset.setLocationId(dto.getLocationId());
         asset.setRemark(blankToNull(dto.getRemark()));
+    }
+
+    private void assertDeptSelectable(Long requested, Long current) {
+        if (requested == null || Objects.equals(requested, current)) {
+            return;
+        }
+        SysDeptDO dept = sysDeptDao.selectById(requested);
+        if (dept == null) {
+            throw new BusinessException("部门不存在");
+        }
+        if (dept.getEnabled() == null || dept.getEnabled() != 1) {
+            throw new BusinessException("部门已停用，不能选用");
+        }
+    }
+
+    private void assertLocationSelectable(Long requested, Long current) {
+        if (requested == null || Objects.equals(requested, current)) {
+            return;
+        }
+        SysLocationDO location = sysLocationDao.selectById(requested);
+        if (location == null) {
+            throw new BusinessException("地点不存在");
+        }
+        if (location.getEnabled() == null || location.getEnabled() != 1) {
+            throw new BusinessException("地点已停用，不能选用");
+        }
     }
 
     private void assertUnique(String assetNo, String serialNo, Long excludeId) {

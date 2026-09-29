@@ -114,7 +114,7 @@ public class UserServiceImpl implements UserService {
     private void fillProfile(SysUserDO user, UserSaveDTO dto, boolean creating) {
         String role = normalizeRole(dto.getRole());
         assertEmail(role, dto.getEmail());
-        assertDept(dto.getDeptId());
+        assertDept(dto.getDeptId(), creating ? null : user.getDeptId());
         user.setRealName(dto.getRealName().trim());
         user.setEmail(blankToNull(dto.getEmail()));
         user.setMobile(blankToNull(dto.getMobile()));
@@ -133,8 +133,8 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    private void assertDept(Long deptId) {
-        if (deptId == null) {
+    private void assertDept(Long deptId, Long currentDeptId) {
+        if (deptId == null || Objects.equals(deptId, currentDeptId)) {
             return;
         }
         SysDeptDO dept = sysDeptDao.selectById(deptId);

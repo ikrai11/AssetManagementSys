@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { finishRepair, getAsset, scrapAsset, startRepair, transferAsset } from '@/api/asset'
 import { listDepts, listLocations } from '@/api/dict'
+import { withCurrentOption } from '@/utils/dict'
 import { useAuthStore } from '@/stores/auth'
 import { actionLabel, assetTagClass, assetTagType } from '@/utils/status'
 import type { AssetItem, DictItem } from '@/types/api'
@@ -50,6 +51,8 @@ async function load() {
 }
 
 function openTransfer() {
+  depts.value = withCurrentOption(depts.value, asset.value?.deptId, asset.value?.deptName)
+  locations.value = withCurrentOption(locations.value, asset.value?.locationId, asset.value?.locationName)
   transferDeptId.value = asset.value?.deptId
   transferLocationId.value = asset.value?.locationId
   transferReason.value = ''

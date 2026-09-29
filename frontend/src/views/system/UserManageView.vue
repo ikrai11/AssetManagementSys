@@ -8,6 +8,7 @@ import { createUser, listUsers, resetUserPassword, updateUser } from '@/api/user
 import { listDepts } from '@/api/dict'
 import { useAuthStore } from '@/stores/auth'
 import type { DictItem, UserAccount, UserSavePayload } from '@/types/api'
+import { withCurrentOption } from '@/utils/dict'
 
 const router = useRouter()
 const route = useRoute()
@@ -44,6 +45,8 @@ const form = reactive({
   password: '',
   enabled: true,
 })
+
+const formDepts = computed(() => withCurrentOption(depts.value, editing.value?.deptId, editing.value?.deptName))
 
 const formRules = computed<FormRules<typeof form>>(() => ({
   username: editing.value ? [] : [{ required: true, message: '请输入账号', trigger: 'blur' }],
@@ -331,7 +334,7 @@ watch(() => [query.page, query.pageSize], () => load())
         </el-form-item>
         <el-form-item label="部门">
           <el-select v-model="form.deptId" clearable placeholder="请选择">
-            <el-option v-for="item in depts" :key="item.id" :label="item.name" :value="item.id" />
+            <el-option v-for="item in formDepts" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="角色" prop="role">

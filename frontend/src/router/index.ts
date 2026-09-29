@@ -102,6 +102,12 @@ const router = createRouter({
           meta: { role: 'ADMIN', title: '用户管理' },
         },
         {
+          path: 'org',
+          name: 'org',
+          component: () => import('@/views/system/OrgManageView.vue'),
+          meta: { role: 'ADMIN', title: '部门地点' },
+        },
+        {
           path: 'system-params',
           name: 'system-params',
           component: () => import('@/views/system/SystemParamView.vue'),

@@ -197,8 +197,8 @@ public class AssetLifecycleServiceImpl implements AssetLifecycleService {
     }
 
     private Long resolveDept(Long requested, Long current) {
-        if (requested == null) {
-            return current;
+        if (requested == null || Objects.equals(requested, current)) {
+            return requested == null ? current : requested;
         }
         SysDeptDO dept = sysDeptDao.selectById(requested);
         if (dept == null || dept.getEnabled() == null || dept.getEnabled() != 1) {
@@ -208,8 +208,8 @@ public class AssetLifecycleServiceImpl implements AssetLifecycleService {
     }
 
     private Long resolveLocation(Long requested, Long current) {
-        if (requested == null) {
-            return current;
+        if (requested == null || Objects.equals(requested, current)) {
+            return requested == null ? current : requested;
         }
         SysLocationDO location = sysLocationDao.selectById(requested);
         if (location == null || location.getEnabled() == null || location.getEnabled() != 1) {

@@ -6,6 +6,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { createAsset, getAsset, updateAsset } from '@/api/asset'
 import { listCategories, listDepts, listLocations } from '@/api/dict'
 import type { DictItem } from '@/types/api'
+import { withCurrentOption } from '@/utils/dict'
 
 const route = useRoute()
 const router = useRouter()
@@ -68,6 +69,8 @@ async function load() {
         locationId: data.data.locationId,
         remark: data.data.remark ?? '',
       })
+      depts.value = withCurrentOption(depts.value, data.data.deptId, data.data.deptName)
+      locations.value = withCurrentOption(locations.value, data.data.locationId, data.data.locationName)
     } finally {
       loading.value = false
     }

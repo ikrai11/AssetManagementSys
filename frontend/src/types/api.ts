@@ -238,6 +238,22 @@ export interface MailRecord {
   createdAt?: string
 }
 
+export interface OrgNode {
+  id: number
+  name: string
+  parentId?: number
+  parentName?: string
+  enabled: boolean
+  referenced: boolean
+  hasChildren: boolean
+}
+
+export interface OrgSavePayload {
+  name: string
+  parentId?: number | null
+  enabled: boolean
+}
+
 export interface AssetQuery {
   categoryIds?: number[]
   statuses?: string[]
