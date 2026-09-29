@@ -167,6 +167,8 @@ export interface BorrowOrder {
   status: string
   statusLabel?: string
   overdue?: boolean
+  remainingDays?: number | null
+  overdueDays?: number | null
   approveComment?: string
   issuedAt?: string
   returnRequestedAt?: string

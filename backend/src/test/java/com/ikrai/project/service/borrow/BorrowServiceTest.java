@@ -8,9 +8,11 @@ import com.ikrai.project.common.exception.BusinessException;
 import com.ikrai.project.common.exception.ConflictException;
 import com.ikrai.project.dao.AssetCategoryDao;
 import com.ikrai.project.dao.AssetDao;
+import com.ikrai.project.dao.BorrowOrderDao;
 import com.ikrai.project.dao.SysUserDao;
 import com.ikrai.project.dataobject.AssetCategoryDO;
 import com.ikrai.project.dataobject.AssetDO;
+import com.ikrai.project.dataobject.BorrowOrderDO;
 import com.ikrai.project.dataobject.SysUserDO;
 import com.ikrai.project.dto.AssetSaveDTO;
 import com.ikrai.project.dto.BorrowCreateDTO;
@@ -30,6 +32,7 @@ import java.time.LocalDate;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -46,6 +49,8 @@ class BorrowServiceTest {
     private AssetService assetService;
     @Autowired
     private AssetDao assetDao;
+    @Autowired
+    private BorrowOrderDao borrowOrderDao;
     @Autowired
     private SysUserDao sysUserDao;
     @Autowired
@@ -172,6 +177,37 @@ class BorrowServiceTest {
         assertEquals(BorrowOrderStatus.APPROVED.name(),
                 borrowService.get(admin, order.getId()).getStatus());
         assertEquals(AssetStatus.PENDING.name(), assetDao.selectById(asset.getId()).getStatus());
+    }
+
+    @Test
+    void usingOrderShowsRemainingOrOverdueDaysAndOverdueCanRequestReturn() {
+        AssetVO asset = createAsset("NB-DAYS");
+        BorrowOrderVO order = borrowService.save(user, submitDto(asset.getId()));
+        borrowService.approve(admin, order.getId());
+        BorrowOrderVO issued = borrowService.issue(admin, order.getId());
+        assertEquals(BorrowOrderStatus.BORROWING.name(), issued.getStatus());
+        assertEquals(7, issued.getRemainingDays());
+        assertNull(issued.getOverdueDays());
+
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+        BorrowOrderDO stored = borrowOrderDao.selectById(order.getId());
+        stored.setExpectedReturnDate(yesterday);
+        borrowOrderDao.updateById(stored);
+        AssetDO assetRow = assetDao.selectById(asset.getId());
+        assetRow.setExpectedReturnDate(yesterday);
+        assetDao.updateById(assetRow);
+
+        BorrowOrderVO overdue = borrowService.get(user, order.getId());
+        assertEquals(BorrowOrderStatus.BORROWING.name(), overdue.getStatus());
+        assertTrue(overdue.isOverdue());
+        assertEquals(1, overdue.getOverdueDays());
+        assertNull(overdue.getRemainingDays());
+
+        BorrowOrderVO requested = borrowService.requestReturn(user, order.getId());
+        assertEquals(BorrowOrderStatus.RETURN_PENDING.name(), requested.getStatus());
+        assertEquals(1, requested.getOverdueDays());
+        assertNull(requested.getRemainingDays());
+        assertEquals(AssetStatus.BORROWED.name(), assetDao.selectById(asset.getId()).getStatus());
     }
 
     @Test

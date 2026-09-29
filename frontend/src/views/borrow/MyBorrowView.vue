@@ -64,6 +64,12 @@ onMounted(load)
           </template>
         </el-table-column>
         <el-table-column prop="expectedReturnDate" label="预计归还日" width="112" />
+        <el-table-column v-if="tab === 'using'" label="天数" width="112">
+          <template #default="{ row }">
+            <span v-if="row.overdueDays != null">逾期 {{ row.overdueDays }} 天</span>
+            <span v-else-if="row.remainingDays != null">剩余 {{ row.remainingDays }} 天</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="148" align="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="router.push({ name: 'borrow-detail', params: { id: row.id } })">

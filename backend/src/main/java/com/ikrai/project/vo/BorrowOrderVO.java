@@ -22,6 +22,8 @@ public class BorrowOrderVO {
     private String status;
     private String statusLabel;
     private boolean overdue;
+    private Integer remainingDays;
+    private Integer overdueDays;
     private Long approverId;
     private LocalDateTime approvedAt;
     private String approveComment;

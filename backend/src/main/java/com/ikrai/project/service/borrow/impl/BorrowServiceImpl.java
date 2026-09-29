@@ -43,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 
@@ -345,6 +346,23 @@ public class BorrowServiceImpl implements BorrowService {
         return order;
     }
 
+    private void fillDueDays(BorrowOrderVO vo, BorrowOrderDO order) {
+        if (order.getExpectedReturnDate() == null) {
+            return;
+        }
+        boolean using = BorrowOrderStatus.BORROWING.name().equals(order.getStatus())
+                || BorrowOrderStatus.RETURN_PENDING.name().equals(order.getStatus());
+        if (!using) {
+            return;
+        }
+        LocalDate today = LocalDate.now();
+        if (order.getExpectedReturnDate().isBefore(today)) {
+            vo.setOverdueDays((int) ChronoUnit.DAYS.between(order.getExpectedReturnDate(), today));
+            return;
+        }
+        vo.setRemainingDays((int) ChronoUnit.DAYS.between(today, order.getExpectedReturnDate()));
+    }
+
     private BorrowOrderVO toVo(BorrowOrderDO order, boolean withLogs) {
         BorrowOrderVO vo = new BorrowOrderVO();
         vo.setId(order.getId());
@@ -366,6 +384,7 @@ public class BorrowServiceImpl implements BorrowService {
         vo.setOverdue(BorrowOrderStatus.BORROWING.name().equals(order.getStatus())
                 && order.getExpectedReturnDate() != null
                 && order.getExpectedReturnDate().isBefore(LocalDate.now()));
+        fillDueDays(vo, order);
         vo.setApproverId(order.getApproverId());
         vo.setApprovedAt(order.getApprovedAt());
         vo.setApproveComment(order.getApproveComment());
