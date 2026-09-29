@@ -1,3 +1,24 @@
+export function isDueSoon(status?: string, expectedReturnDate?: string | null, overdue?: boolean) {
+  if (overdue || status !== 'BORROWED' || !expectedReturnDate) return false
+  const due = parseLocalDate(expectedReturnDate)
+  if (!due) return false
+  const today = startOfLocalDay(new Date())
+  const until = new Date(today)
+  until.setDate(until.getDate() + 7)
+  return due.getTime() >= today.getTime() && due.getTime() <= until.getTime()
+}
+
+function parseLocalDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
+  if (!match) return null
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function startOfLocalDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
 export function assetTagType(status?: string, overdue?: boolean) {
   if (overdue) return 'danger'
   if (status === 'IN_STOCK') return 'success'

@@ -4,6 +4,7 @@ import com.ikrai.project.common.AuthUser;
 import com.ikrai.project.dto.AssetSaveDTO;
 import com.ikrai.project.query.AssetQuery;
 import com.ikrai.project.vo.AssetDetailVO;
+import com.ikrai.project.vo.AssetUniqueVO;
 import com.ikrai.project.vo.AssetVO;
 import com.ikrai.project.vo.PageVO;
 
@@ -20,6 +21,8 @@ public interface AssetService {
     void remove(Long id);
 
     void remove(AuthUser operator, Long id);
+
+    AssetUniqueVO checkUnique(String assetNo, String serialNo, Long excludeId);
 
     AssetDetailVO get(Long id, AuthUser viewer);
 

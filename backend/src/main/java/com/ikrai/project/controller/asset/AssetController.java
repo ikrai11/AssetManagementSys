@@ -13,6 +13,7 @@ import com.ikrai.project.service.asset.AssetFileService;
 import com.ikrai.project.service.asset.AssetLifecycleService;
 import com.ikrai.project.service.asset.AssetService;
 import com.ikrai.project.vo.AssetDetailVO;
+import com.ikrai.project.vo.AssetUniqueVO;
 import com.ikrai.project.vo.AssetFileContent;
 import com.ikrai.project.vo.AssetFileVO;
 import com.ikrai.project.vo.AssetImportVO;
@@ -86,6 +87,14 @@ public class AssetController {
     @PreAuthorize("hasRole('ADMIN')")
     public void importFailures(HttpServletResponse response) throws IOException {
         writeExcel(response, "导入失败明细.xlsx", assetExcelService.lastFailFile(SecurityUsers.current()));
+    }
+
+    @GetMapping("/unique-check")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<AssetUniqueVO> uniqueCheck(@RequestParam(required = false) String assetNo,
+                                             @RequestParam(required = false) String serialNo,
+                                             @RequestParam(required = false) Long excludeId) {
+        return Result.ok(assetService.checkUnique(assetNo, serialNo, excludeId));
     }
 
     @GetMapping("/export")

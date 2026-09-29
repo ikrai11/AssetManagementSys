@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { createAsset, getAsset, updateAsset } from '@/api/asset'
+import { checkAssetUnique, createAsset, getAsset, updateAsset } from '@/api/asset'
 import { listCategories, listDepts, listLocations } from '@/api/dict'
 import type { DictItem } from '@/types/api'
 import { withCurrentOption } from '@/utils/dict'
@@ -34,10 +34,49 @@ const form = reactive({
   remark: '',
 })
 
+function excludeId() {
+  return editing.value ? Number(route.params.id) : undefined
+}
+
+async function rejectIfTaken(field: 'assetNo' | 'serialNo', value: string, callback: (error?: Error) => void) {
+  const text = value.trim()
+  if (!text) {
+    callback()
+    return
+  }
+  try {
+    const { data } = await checkAssetUnique({
+      assetNo: field === 'assetNo' ? text : undefined,
+      serialNo: field === 'serialNo' ? text : undefined,
+      excludeId: excludeId(),
+    })
+    const taken = field === 'assetNo' ? data.data.assetNoExists : data.data.serialNoExists
+    callback(taken ? new Error(field === 'assetNo' ? '资产编号已存在' : '序列号已存在') : undefined)
+  } catch {
+    callback(new Error('暂时无法检查是否重复'))
+  }
+}
+
 const rules: FormRules<typeof form> = {
-  assetNo: [{ required: true, message: '请填写资产编号', trigger: 'blur' }],
+  assetNo: [
+    { required: true, message: '请填写资产编号', trigger: 'blur' },
+    {
+      validator: (_rule, value, callback) => {
+        rejectIfTaken('assetNo', String(value ?? ''), callback)
+      },
+      trigger: 'blur',
+    },
+  ],
   name: [{ required: true, message: '请填写资产名称', trigger: 'blur' }],
   categoryId: [{ required: true, message: '请选择设备类型', trigger: 'change' }],
+  serialNo: [
+    {
+      validator: (_rule, value, callback) => {
+        rejectIfTaken('serialNo', String(value ?? ''), callback)
+      },
+      trigger: 'blur',
+    },
+  ],
 }
 
 async function load() {
@@ -134,7 +173,7 @@ onMounted(load)
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="序列号">
+            <el-form-item label="序列号" prop="serialNo">
               <el-input v-model="form.serialNo" />
             </el-form-item>
           </el-col>

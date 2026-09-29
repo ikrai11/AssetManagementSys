@@ -55,6 +55,13 @@ export function getAsset(id: number) {
   return http.get<Result<AssetItem>>(`/assets/${id}`)
 }
 
+export function checkAssetUnique(params: { assetNo?: string; serialNo?: string; excludeId?: number }) {
+  return http.get<Result<{ assetNoExists: boolean; serialNoExists: boolean }>>('/assets/unique-check', {
+    params,
+    skipErrorMessage: true,
+  })
+}
+
 export function createAsset(payload: Partial<AssetItem>) {
   return http.post<Result<AssetItem>>('/assets', payload)
 }

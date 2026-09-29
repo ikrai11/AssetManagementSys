@@ -34,6 +34,7 @@ import com.ikrai.project.service.asset.AssetFileService;
 import com.ikrai.project.service.asset.AssetService;
 import com.ikrai.project.vo.AssetDetailVO;
 import com.ikrai.project.vo.AssetLogVO;
+import com.ikrai.project.vo.AssetUniqueVO;
 import com.ikrai.project.vo.AssetVO;
 import com.ikrai.project.vo.BorrowLogVO;
 import com.ikrai.project.vo.PageVO;
@@ -161,6 +162,19 @@ public class AssetServiceImpl implements AssetService {
         if (operator != null) {
             writeAudit(operator, assetNo, "DELETE", "删除设备 " + assetNo + " " + name);
         }
+    }
+
+    @Override
+    public AssetUniqueVO checkUnique(String assetNo, String serialNo, Long excludeId) {
+        AssetUniqueVO vo = new AssetUniqueVO();
+        if (StrUtil.isNotBlank(assetNo)) {
+            vo.setAssetNoExists(countAssetNo(assetNo.trim(), excludeId) > 0);
+        }
+        String serial = blankToNull(serialNo);
+        if (serial != null) {
+            vo.setSerialNoExists(countSerial(serial, excludeId) > 0);
+        }
+        return vo;
     }
 
     @Override
@@ -343,21 +357,27 @@ public class AssetServiceImpl implements AssetService {
     }
 
     private void assertUnique(String assetNo, String serialNo, Long excludeId) {
-        Long noCount = assetDao.selectCount(Wrappers.<AssetDO>lambdaQuery()
-                .eq(AssetDO::getAssetNo, assetNo.trim())
-                .ne(excludeId != null, AssetDO::getId, excludeId));
-        if (noCount != null && noCount > 0) {
+        AssetUniqueVO check = checkUnique(assetNo, serialNo, excludeId);
+        if (check.isAssetNoExists()) {
             throw new BusinessException("资产编号已存在");
         }
-        String serial = blankToNull(serialNo);
-        if (serial != null) {
-            Long serialCount = assetDao.selectCount(Wrappers.<AssetDO>lambdaQuery()
-                    .eq(AssetDO::getSerialNo, serial)
-                    .ne(excludeId != null, AssetDO::getId, excludeId));
-            if (serialCount != null && serialCount > 0) {
-                throw new BusinessException("序列号已存在");
-            }
+        if (check.isSerialNoExists()) {
+            throw new BusinessException("序列号已存在");
         }
+    }
+
+    private long countAssetNo(String assetNo, Long excludeId) {
+        Long count = assetDao.selectCount(Wrappers.<AssetDO>lambdaQuery()
+                .eq(AssetDO::getAssetNo, assetNo)
+                .ne(excludeId != null, AssetDO::getId, excludeId));
+        return count == null ? 0 : count;
+    }
+
+    private long countSerial(String serialNo, Long excludeId) {
+        Long count = assetDao.selectCount(Wrappers.<AssetDO>lambdaQuery()
+                .eq(AssetDO::getSerialNo, serialNo)
+                .ne(excludeId != null, AssetDO::getId, excludeId));
+        return count == null ? 0 : count;
     }
 
     private void validateDateRange(LocalDate from, LocalDate to) {

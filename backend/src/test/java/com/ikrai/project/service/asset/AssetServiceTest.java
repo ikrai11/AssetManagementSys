@@ -12,6 +12,7 @@ import com.ikrai.project.dto.BorrowCreateDTO;
 import com.ikrai.project.query.AssetQuery;
 import com.ikrai.project.service.borrow.BorrowService;
 import com.ikrai.project.vo.AssetDetailVO;
+import com.ikrai.project.vo.AssetUniqueVO;
 import com.ikrai.project.vo.AssetVO;
 import com.ikrai.project.vo.PageVO;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,7 @@ import java.time.LocalDate;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -119,6 +121,25 @@ class AssetServiceTest {
         BusinessException ex = assertThrows(BusinessException.class, () -> assetService.save(second));
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         assertTrue(ex.getMessage().contains("资产编号"));
+    }
+
+    @Test
+    void uniqueCheckFlagsDuplicatesAndIgnoresCurrentAsset() {
+        AssetSaveDTO first = baseAsset("UNQ-A");
+        first.setSerialNo("SN-UNQ-1");
+        AssetVO saved = assetService.save(first);
+
+        AssetUniqueVO duplicated = assetService.checkUnique(" UNQ-A ", "SN-UNQ-1", null);
+        assertTrue(duplicated.isAssetNoExists());
+        assertTrue(duplicated.isSerialNoExists());
+
+        AssetUniqueVO self = assetService.checkUnique("UNQ-A", "SN-UNQ-1", saved.getId());
+        assertFalse(self.isAssetNoExists());
+        assertFalse(self.isSerialNoExists());
+
+        AssetUniqueVO blank = assetService.checkUnique("UNQ-FREE", "  ", null);
+        assertFalse(blank.isAssetNoExists());
+        assertFalse(blank.isSerialNoExists());
     }
 
     @Test

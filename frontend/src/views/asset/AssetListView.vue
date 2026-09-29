@@ -7,7 +7,7 @@ import { downloadImportFailures, downloadImportTemplate, exportAssets, importAss
 import { listCategories, listDepts, listLocations } from '@/api/dict'
 import { useAuthStore } from '@/stores/auth'
 import { useMessageStore } from '@/stores/message'
-import { assetTagClass, assetTagType } from '@/utils/status'
+import { assetTagClass, assetTagType, isDueSoon } from '@/utils/status'
 import type { AssetImportResult, AssetItem, DictItem } from '@/types/api'
 import type { UploadFile } from 'element-plus'
 
@@ -413,7 +413,14 @@ watch(() => [query.page, query.pageSize], () => load())
         <el-table-column prop="locationName" label="存放地点" min-width="100" show-overflow-tooltip />
         <el-table-column prop="holderName" label="领用人" width="88" show-overflow-tooltip />
         <el-table-column prop="borrowStartDate" label="领用时间" width="112" />
-        <el-table-column prop="expectedReturnDate" label="预计归还日" width="112" />
+        <el-table-column label="预计归还日" width="168">
+          <template #default="{ row }">
+            <span :class="{ 'due-soon-text': isDueSoon(row.status, row.expectedReturnDate, row.overdue) }">
+              {{ row.expectedReturnDate }}
+              <template v-if="isDueSoon(row.status, row.expectedReturnDate, row.overdue)">即将到期</template>
+            </span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="168" align="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="router.push({ name: 'asset-detail', params: { id: row.id } })">
