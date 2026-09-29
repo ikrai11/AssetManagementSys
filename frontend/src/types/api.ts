@@ -124,6 +124,17 @@ export interface AssetItem {
   repairFault?: string
 }
 
+export interface AssetFile {
+  id: number
+  assetId: number
+  kind: string
+  kindLabel: string
+  originalName: string
+  contentType: string
+  sizeBytes: number
+  createdAt?: string
+}
+
 export interface AssetLog {
   id: number
   action: string

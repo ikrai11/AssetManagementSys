@@ -8,6 +8,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -24,6 +25,12 @@ public class GlobalExceptionHandler {
         String message = fieldError == null ? "参数不合法" : fieldError.getDefaultMessage();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Result.fail(HttpStatus.BAD_REQUEST.value(), message));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Result<Void>> handleUploadSize(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Result.fail(HttpStatus.BAD_REQUEST.value(), "文件不能超过 10MB"));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

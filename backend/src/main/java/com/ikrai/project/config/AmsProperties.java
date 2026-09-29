@@ -14,6 +14,7 @@ public class AmsProperties {
     private final Init init = new Init();
     private final Excel excel = new Excel();
     private final Mail mail = new Mail();
+    private final FileStorage file = new FileStorage();
 
     @Data
     public static class Borrow {
@@ -36,5 +37,10 @@ public class AmsProperties {
     public static class Mail {
         private boolean enabled = false;
         private String from = "";
+    }
+
+    @Data
+    public static class FileStorage {
+        private String dir = "data/asset-files";
     }
 }

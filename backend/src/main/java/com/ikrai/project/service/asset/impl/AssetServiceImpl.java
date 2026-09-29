@@ -28,6 +28,7 @@ import com.ikrai.project.dataobject.SysLocationDO;
 import com.ikrai.project.dataobject.SysUserDO;
 import com.ikrai.project.dto.AssetSaveDTO;
 import com.ikrai.project.query.AssetQuery;
+import com.ikrai.project.service.asset.AssetFileService;
 import com.ikrai.project.service.asset.AssetService;
 import com.ikrai.project.vo.AssetDetailVO;
 import com.ikrai.project.vo.AssetLogVO;
@@ -60,6 +61,7 @@ public class AssetServiceImpl implements AssetService {
     private final BorrowLogDao borrowLogDao;
     private final AssetLogDao assetLogDao;
     private final AssetRepairDao assetRepairDao;
+    private final AssetFileService assetFileService;
 
     public AssetServiceImpl(AssetDao assetDao,
                             AssetCategoryDao assetCategoryDao,
@@ -69,7 +71,8 @@ public class AssetServiceImpl implements AssetService {
                             BorrowOrderDao borrowOrderDao,
                             BorrowLogDao borrowLogDao,
                             AssetLogDao assetLogDao,
-                            AssetRepairDao assetRepairDao) {
+                            AssetRepairDao assetRepairDao,
+                            AssetFileService assetFileService) {
         this.assetDao = assetDao;
         this.assetCategoryDao = assetCategoryDao;
         this.sysDeptDao = sysDeptDao;
@@ -79,6 +82,7 @@ public class AssetServiceImpl implements AssetService {
         this.borrowLogDao = borrowLogDao;
         this.assetLogDao = assetLogDao;
         this.assetRepairDao = assetRepairDao;
+        this.assetFileService = assetFileService;
     }
 
     @Override
@@ -118,6 +122,7 @@ public class AssetServiceImpl implements AssetService {
         if (count != null && count > 0) {
             throw new BusinessException("仅在库且无领用记录的设备可删除");
         }
+        assetFileService.deleteAll(id);
         assetDao.deleteById(id);
     }
 

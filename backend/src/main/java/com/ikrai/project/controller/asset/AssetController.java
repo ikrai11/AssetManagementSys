@@ -9,9 +9,12 @@ import com.ikrai.project.dto.AssetScrapDTO;
 import com.ikrai.project.dto.AssetTransferDTO;
 import com.ikrai.project.query.AssetQuery;
 import com.ikrai.project.service.asset.AssetExcelService;
+import com.ikrai.project.service.asset.AssetFileService;
 import com.ikrai.project.service.asset.AssetLifecycleService;
 import com.ikrai.project.service.asset.AssetService;
 import com.ikrai.project.vo.AssetDetailVO;
+import com.ikrai.project.vo.AssetFileContent;
+import com.ikrai.project.vo.AssetFileVO;
 import com.ikrai.project.vo.AssetImportVO;
 import com.ikrai.project.vo.AssetVO;
 import com.ikrai.project.vo.PageVO;
@@ -31,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -43,13 +47,16 @@ public class AssetController {
     private final AssetService assetService;
     private final AssetExcelService assetExcelService;
     private final AssetLifecycleService assetLifecycleService;
+    private final AssetFileService assetFileService;
 
     public AssetController(AssetService assetService,
                            AssetExcelService assetExcelService,
-                           AssetLifecycleService assetLifecycleService) {
+                           AssetLifecycleService assetLifecycleService,
+                           AssetFileService assetFileService) {
         this.assetService = assetService;
         this.assetExcelService = assetExcelService;
         this.assetLifecycleService = assetLifecycleService;
+        this.assetFileService = assetFileService;
     }
 
     @GetMapping
@@ -97,6 +104,37 @@ public class AssetController {
     @PreAuthorize("hasRole('ADMIN')")
     public Result<AssetVO> update(@PathVariable Long id, @Valid @RequestBody AssetSaveDTO dto) {
         return Result.ok(assetService.update(id, dto));
+    }
+
+    @GetMapping("/{id}/files")
+    public Result<List<AssetFileVO>> listFiles(@PathVariable Long id) {
+        return Result.ok(assetFileService.list(SecurityUsers.current(), id));
+    }
+
+    @PostMapping(value = "/{id}/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<AssetFileVO> uploadFile(@PathVariable Long id,
+                                          @RequestParam String kind,
+                                          @RequestParam("file") MultipartFile file) {
+        return Result.ok(assetFileService.upload(SecurityUsers.current(), id, kind, file));
+    }
+
+    @GetMapping("/{id}/files/{fileId}")
+    public void downloadFile(@PathVariable Long id, @PathVariable Long fileId, HttpServletResponse response) throws IOException {
+        AssetFileContent content = assetFileService.download(SecurityUsers.current(), id, fileId);
+        String encoded = URLEncoder.encode(content.getOriginalName(), StandardCharsets.UTF_8).replace("+", "%20");
+        response.setHeader("X-Content-Type-Options", "nosniff");
+        response.setHeader("Content-Security-Policy", "default-src 'none'");
+        response.setHeader("Content-Disposition", "attachment;filename*=utf-8''" + encoded);
+        response.setContentType(content.getContentType());
+        response.getOutputStream().write(content.getBytes());
+    }
+
+    @DeleteMapping("/{id}/files/{fileId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Void> deleteFile(@PathVariable Long id, @PathVariable Long fileId) {
+        assetFileService.delete(SecurityUsers.current(), id, fileId);
+        return Result.ok(null);
     }
 
     @DeleteMapping("/{id}")

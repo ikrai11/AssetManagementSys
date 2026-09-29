@@ -1,6 +1,6 @@
 import axios from 'axios'
 import http from './http'
-import type { AssetImportResult, AssetItem, AssetQuery, PageResult, Result } from '@/types/api'
+import type { AssetFile, AssetImportResult, AssetItem, AssetQuery, PageResult, Result } from '@/types/api'
 
 function filenameFrom(disposition: string | undefined, fallback: string) {
   if (!disposition) return fallback
@@ -93,6 +93,50 @@ export function finishRepair(id: number, payload: { result: string; finishedDate
 
 export function scrapAsset(id: number, reason: string) {
   return http.post<Result<null>>(`/assets/${id}/scrap`, { reason })
+}
+
+export function listAssetFiles(assetId: number) {
+  return http.get<Result<AssetFile[]>>(`/assets/${assetId}/files`)
+}
+
+export function uploadAssetFile(assetId: number, kind: string, file: File) {
+  const form = new FormData()
+  form.append('kind', kind)
+  form.append('file', file)
+  return http.post<Result<AssetFile>>(`/assets/${assetId}/files`, form)
+}
+
+export function deleteAssetFile(assetId: number, fileId: number) {
+  return http.delete<Result<null>>(`/assets/${assetId}/files/${fileId}`)
+}
+
+export async function fetchAssetFile(assetId: number, fileId: number, filename: string) {
+  const blob = await loadAssetFileBlob(assetId, fileId)
+  saveBlob(blob, filename)
+}
+
+export async function loadAssetFileBlob(assetId: number, fileId: number) {
+  try {
+    const response = await http.get<Blob>(`/assets/${assetId}/files/${fileId}`, {
+      responseType: 'blob',
+      skipErrorMessage: true,
+    })
+    const blob = response.data
+    if (blob.type.includes('application/json')) {
+      const body = JSON.parse(await blob.text()) as Result<null>
+      throw new Error(body.message || '下载失败')
+    }
+    return blob
+  } catch (error) {
+    if (error instanceof Error && !(axios.isAxiosError(error))) {
+      throw error
+    }
+    if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+      const body = JSON.parse(await error.response.data.text()) as Result<null>
+      throw new Error(body.message || '下载失败')
+    }
+    throw error
+  }
 }
 
 export function importAssets(file: File) {

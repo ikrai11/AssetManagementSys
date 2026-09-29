@@ -23,3 +23,5 @@ ams:
     user-password: User@123
   mail:
     enabled: false
+  file:
+    dir: target/test-asset-files
