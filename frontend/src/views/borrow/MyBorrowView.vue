@@ -1,17 +1,24 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { listBorrows, requestReturn, withdrawBorrow } from '@/api/borrow'
+import { ElMessage } from 'element-plus'
+import { applyRenew, listBorrows, requestReturn, withdrawBorrow } from '@/api/borrow'
+import { useAuthStore } from '@/stores/auth'
 import { useMessageStore } from '@/stores/message'
 import { borrowTagType } from '@/utils/status'
 import type { BorrowOrder } from '@/types/api'
 
 const router = useRouter()
 const route = useRoute()
+const auth = useAuthStore()
 const messages = useMessageStore()
 const loading = ref(false)
 const tab = ref(typeof route.query.tab === 'string' ? route.query.tab : 'active')
 const all = ref<BorrowOrder[]>([])
+const renewOpen = ref(false)
+const renewTarget = ref<BorrowOrder>()
+const renewDate = ref('')
+const renewReason = ref('')
 
 const groups = computed(() => ({
   active: all.value.filter((item) => ['DRAFT', 'PENDING', 'APPROVED'].includes(item.status)),
@@ -43,6 +50,32 @@ async function applyReturn(row: BorrowOrder) {
   await messages.refresh()
 }
 
+function canRenew(row: BorrowOrder) {
+  return auth.role !== 'ADMIN' && row.status === 'BORROWING' && !row.pendingRenewId
+}
+
+function openRenew(row: BorrowOrder) {
+  renewTarget.value = row
+  renewDate.value = ''
+  renewReason.value = ''
+  renewOpen.value = true
+}
+
+async function submitRenew() {
+  if (!renewTarget.value || !renewDate.value || !renewReason.value.trim()) {
+    ElMessage.warning('请填写新预计归还日和理由')
+    return
+  }
+  await applyRenew(renewTarget.value.id, {
+    newReturnDate: renewDate.value,
+    reason: renewReason.value.trim(),
+  })
+  ElMessage.success('已提交续借')
+  renewOpen.value = false
+  await load()
+  await messages.refresh()
+}
+
 onMounted(load)
 </script>
 
@@ -70,16 +103,34 @@ onMounted(load)
             <span v-else-if="row.remainingDays != null">剩余 {{ row.remainingDays }} 天</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="148" align="right">
+        <el-table-column label="操作" width="248" align="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="router.push({ name: 'borrow-detail', params: { id: row.id } })">
               详情
             </el-button>
             <el-button v-if="row.status === 'PENDING'" link type="warning" @click="withdraw(row)">撤回</el-button>
-            <el-button v-if="row.status === 'BORROWING'" link type="primary" @click="applyReturn(row)">申请归还</el-button>
+            <el-button v-if="canRenew(row)" link type="primary" @click="openRenew(row)">申请续借</el-button>
+            <el-button v-if="row.status === 'BORROWING' && !row.pendingRenewId" link type="primary" @click="applyReturn(row)">
+              申请归还
+            </el-button>
+            <span v-if="row.pendingRenewId">续借待审批</span>
           </template>
         </el-table-column>
       </el-table>
     </div>
+    <el-dialog v-model="renewOpen" title="申请续借" width="420px">
+      <el-form label-width="110px">
+        <el-form-item label="新预计归还日">
+          <el-date-picker v-model="renewDate" type="date" value-format="YYYY-MM-DD" placeholder="须晚于原日期" />
+        </el-form-item>
+        <el-form-item label="理由">
+          <el-input v-model="renewReason" type="textarea" maxlength="500" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="renewOpen = false">取消</el-button>
+        <el-button type="primary" @click="submitRenew">提交</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
