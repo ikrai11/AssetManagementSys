@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { UserRole } from '@/types/role'
-import { changePassword as changePasswordApi, getMe, login as loginApi, logout as logoutApi } from '@/api/auth'
+import { changePassword as changePasswordApi, getMe, login as loginApi, logout as logoutApi, updateProfile as updateProfileApi } from '@/api/auth'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') ?? '')
@@ -45,6 +45,13 @@ export const useAuthStore = defineStore('auth', () => {
     persist()
   }
 
+  async function saveProfile(name: string, email: string) {
+    const { data } = await updateProfileApi(name, email)
+    realName.value = data.data.realName
+    persist()
+    return data.data
+  }
+
   async function logout() {
     try {
       if (loggedIn.value) {
@@ -78,6 +85,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     fetchMe,
     updatePassword,
+    saveProfile,
     logout,
     clear,
   }

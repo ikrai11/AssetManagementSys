@@ -1,0 +1,21 @@
+# 复制本文件为 application-local.yml 后填写。该文件已被 git 忽略，不要提交密码。
+# 开发配置会在存在 application-local.yml 时覆盖邮件开关。没配 host 时不会创建发信组件，记录仍是「邮件通道未配置」。
+# 587 使用 STARTTLS。465 改用 SSL 时把 starttls 两行换成 mail.smtp.ssl.enable: true。
+ams:
+  mail:
+    enabled: true
+    from: your-name@example.com
+
+spring:
+  mail:
+    host: smtp.example.com
+    port: 587
+    username: your-name@example.com
+    password: replace-with-app-password
+    properties:
+      "[mail.smtp.auth]": true
+      "[mail.smtp.starttls.enable]": true
+      "[mail.smtp.starttls.required]": true
+      "[mail.smtp.connectiontimeout]": 5000
+      "[mail.smtp.timeout]": 5000
+      "[mail.smtp.writetimeout]": 5000

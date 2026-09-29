@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Bell, Box, Document, DocumentChecked, House, Lock, Message, Notebook, OfficeBuilding, Setting, SwitchButton, Tickets, User } from '@element-plus/icons-vue'
+import { Bell, Box, Document, DocumentChecked, House, Message, Notebook, OfficeBuilding, Setting, SwitchButton, Tickets, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useMessageStore } from '@/stores/message'
 
@@ -24,7 +24,7 @@ const menus = computed(() => {
       { path: '/system-params', title: '系统参数', icon: Setting },
       { path: '/audit-logs', title: '审计日志', icon: Document },
       { path: '/mail-records', title: '邮件记录', icon: Message },
-      { path: '/password', title: '修改密码', icon: Lock },
+      { path: '/profile', title: '个人中心', icon: User },
     ]
   }
   return [
@@ -32,7 +32,7 @@ const menus = computed(() => {
     { path: '/assets', title: '设备', icon: Box },
     { path: '/borrows/mine', title: '我的领用', icon: Notebook },
     { path: '/messages', title: '消息中心', icon: Bell },
-    { path: '/password', title: '修改密码', icon: Lock },
+    { path: '/profile', title: '个人中心', icon: User },
   ]
 })
 

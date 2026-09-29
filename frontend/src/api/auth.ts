@@ -16,3 +16,7 @@ export function getMe() {
 export function changePassword(oldPassword: string, newPassword: string) {
   return http.put<Result<null>>('/auth/password', { oldPassword, newPassword })
 }
+
+export function updateProfile(realName: string, email: string) {
+  return http.put<Result<UserProfile>>('/auth/profile', { realName, email })
+}

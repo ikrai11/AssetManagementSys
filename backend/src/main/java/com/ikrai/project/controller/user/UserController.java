@@ -4,6 +4,7 @@ import com.ikrai.project.common.result.Result;
 import com.ikrai.project.config.SecurityUsers;
 import com.ikrai.project.dto.ChangePasswordDTO;
 import com.ikrai.project.dto.LoginDTO;
+import com.ikrai.project.dto.ProfileUpdateDTO;
 import com.ikrai.project.service.user.AuthService;
 import com.ikrai.project.vo.LoginVO;
 import com.ikrai.project.vo.UserVO;
@@ -38,6 +39,11 @@ public class UserController {
     @GetMapping("/me")
     public Result<UserVO> me() {
         return Result.ok(authService.getMe(SecurityUsers.current()));
+    }
+
+    @PutMapping("/profile")
+    public Result<UserVO> profile(@Valid @RequestBody ProfileUpdateDTO dto) {
+        return Result.ok(authService.updateProfile(SecurityUsers.current(), dto));
     }
 
     @PutMapping("/password")

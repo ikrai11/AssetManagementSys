@@ -126,6 +126,12 @@ const router = createRouter({
           meta: { role: 'ADMIN', title: '邮件记录' },
         },
         {
+          path: 'profile',
+          name: 'profile',
+          component: () => import('@/views/user/ProfileView.vue'),
+          meta: { title: '个人中心' },
+        },
+        {
           path: 'password',
           name: 'password',
           component: () => import('@/views/user/PasswordView.vue'),
