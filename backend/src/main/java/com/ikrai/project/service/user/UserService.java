@@ -9,7 +9,7 @@ import com.ikrai.project.vo.UserVO;
 
 public interface UserService {
 
-    UserVO create(UserSaveDTO dto);
+    UserVO create(AuthUser operator, UserSaveDTO dto);
 
     UserVO update(AuthUser operator, Long id, UserSaveDTO dto);
 

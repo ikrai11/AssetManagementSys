@@ -36,7 +36,7 @@ public class UserAdminController {
 
     @PostMapping
     public Result<UserVO> create(@Valid @RequestBody UserSaveDTO dto) {
-        return Result.ok(userService.create(dto));
+        return Result.ok(userService.create(SecurityUsers.current(), dto));
     }
 
     @PutMapping("/{id}")

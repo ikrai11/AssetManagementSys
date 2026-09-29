@@ -164,7 +164,7 @@ class OrgServiceTest {
                 () -> assetService.save(asset("ORG-" + next(), dept.getId(), locationA)));
         assertTrue(chosen.getMessage().contains("已停用"));
 
-        BusinessException newUser = assertThrows(BusinessException.class, () -> userService.create(userDto(dept.getId())));
+        BusinessException newUser = assertThrows(BusinessException.class, () -> userService.create(admin, userDto(dept.getId())));
         assertTrue(newUser.getMessage().contains("已停用"));
 
         UserVO renamed = userService.update(admin, member.getId(), profile(member, dept.getId(), "改名后"));

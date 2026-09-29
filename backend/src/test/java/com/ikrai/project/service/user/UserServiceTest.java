@@ -1,10 +1,13 @@
 package com.ikrai.project.service.user;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.ikrai.project.common.AuthUser;
 import com.ikrai.project.common.enums.UserRole;
 import com.ikrai.project.common.exception.BusinessException;
+import com.ikrai.project.dao.AuditLogDao;
 import com.ikrai.project.dao.SysDeptDao;
 import com.ikrai.project.dao.SysUserDao;
+import com.ikrai.project.dataobject.AuditLogDO;
 import com.ikrai.project.dataobject.SysUserDO;
 import com.ikrai.project.dto.LoginDTO;
 import com.ikrai.project.dto.ResetPasswordDTO;
@@ -21,6 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,6 +41,8 @@ class UserServiceTest {
 
     @Autowired
     private UserService userService;
+    @Autowired
+    private AuditLogDao auditLogDao;
     @Autowired
     private AuthService authService;
     @Autowired
@@ -58,7 +64,7 @@ class UserServiceTest {
         UserSaveDTO dto = newUser("staff", UserRole.USER);
         dto.setEmail("  ");
 
-        BusinessException ex = assertThrows(BusinessException.class, () -> userService.create(dto));
+        BusinessException ex = assertThrows(BusinessException.class, () -> userService.create(admin, dto));
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         assertTrue(ex.getMessage().contains("邮箱"));
     }
@@ -68,7 +74,7 @@ class UserServiceTest {
         UserSaveDTO dto = newUser("badmail", UserRole.USER);
         dto.setEmail("not-an-email");
 
-        BusinessException ex = assertThrows(BusinessException.class, () -> userService.create(dto));
+        BusinessException ex = assertThrows(BusinessException.class, () -> userService.create(admin, dto));
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         assertTrue(ex.getMessage().contains("邮箱"));
     }
@@ -76,11 +82,11 @@ class UserServiceTest {
     @Test
     void createUserRejectsDuplicateUsername() {
         UserSaveDTO first = newUser("dup", UserRole.USER);
-        userService.create(first);
+        userService.create(admin, first);
         UserSaveDTO second = newUser("dup", UserRole.USER);
         second.setUsername(first.getUsername());
 
-        BusinessException ex = assertThrows(BusinessException.class, () -> userService.create(second));
+        BusinessException ex = assertThrows(BusinessException.class, () -> userService.create(admin, second));
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         assertTrue(ex.getMessage().contains("账号"));
     }
@@ -101,7 +107,7 @@ class UserServiceTest {
 
     @Test
     void disableLastAdminFails() {
-        UserVO lastAdmin = userService.create(newUser("onlyadmin", UserRole.ADMIN));
+        UserVO lastAdmin = userService.create(admin, newUser("onlyadmin", UserRole.ADMIN));
         disableAllSeedAdminsExcept(lastAdmin.getId());
 
         UserSaveDTO dto = new UserSaveDTO();
@@ -118,7 +124,7 @@ class UserServiceTest {
 
     @Test
     void disableUserBlocksLoginAndKeepsAccount() {
-        UserVO created = userService.create(newUser("gone", UserRole.USER));
+        UserVO created = userService.create(admin, newUser("gone", UserRole.USER));
         int version = sysUserDao.selectById(created.getId()).getTokenVersion();
 
         UserSaveDTO dto = new UserSaveDTO();
@@ -141,7 +147,7 @@ class UserServiceTest {
 
     @Test
     void resetPasswordForcesChangeOnNextLogin() {
-        UserVO created = userService.create(newUser("resetme", UserRole.USER));
+        UserVO created = userService.create(admin, newUser("resetme", UserRole.USER));
         int version = sysUserDao.selectById(created.getId()).getTokenVersion();
 
         ResetPasswordDTO reset = new ResetPasswordDTO();
@@ -161,7 +167,7 @@ class UserServiceTest {
 
     @Test
     void changeLastAdminRoleToUserFails() {
-        UserVO created = userService.create(newUser("keepadmin", UserRole.ADMIN));
+        UserVO created = userService.create(admin, newUser("keepadmin", UserRole.ADMIN));
         disableAllSeedAdminsExcept(created.getId());
         AuthUser operator = asUser(sysUserDao.selectById(created.getId()));
 
@@ -184,11 +190,11 @@ class UserServiceTest {
         UserSaveDTO staff = newUser("filteru", UserRole.USER);
         staff.setRealName("筛选甲");
         staff.setDeptId(deptId);
-        userService.create(staff);
+        userService.create(admin, staff);
 
         UserSaveDTO other = newUser("otheradm", UserRole.ADMIN);
         other.setEnabled(false);
-        userService.create(other);
+        userService.create(admin, other);
 
         UserQuery query = new UserQuery();
         query.setKeyword("筛选");
@@ -201,6 +207,52 @@ class UserServiceTest {
         assertEquals("筛选甲", page.getList().get(0).getRealName());
         assertEquals("普通用户", page.getList().get(0).getRoleLabel());
         assertFalse(page.getList().get(0).isMustChangePassword() && page.getList().get(0).getEmail() == null);
+    }
+
+    @Test
+    void userChangesWriteAuditWithoutPassword() {
+        UserSaveDTO dto = newUser("audited", UserRole.USER);
+        UserVO created = userService.create(admin, dto);
+
+        List<AuditLogDO> createdLogs = audits(created.getUsername());
+        assertEquals(1, createdLogs.size());
+        assertEquals("USER", createdLogs.get(0).getModule());
+        assertEquals("CREATE", createdLogs.get(0).getAction());
+        assertTrue(createdLogs.get(0).getSummary().contains("普通用户"));
+        assertFalse(createdLogs.get(0).getSummary().contains(dto.getPassword()));
+
+        UserSaveDTO roleChange = newUser("unused", UserRole.ADMIN);
+        roleChange.setUsername(created.getUsername());
+        roleChange.setRealName(created.getRealName());
+        roleChange.setEmail(created.getEmail());
+        userService.update(admin, created.getId(), roleChange);
+        assertTrue(audits(created.getUsername()).stream()
+                .anyMatch(item -> "UPDATE".equals(item.getAction()) && item.getSummary().contains("系统管理员")));
+
+        ResetPasswordDTO reset = new ResetPasswordDTO();
+        reset.setPassword("Secret@123");
+        userService.resetPassword(admin, created.getId(), reset);
+        AuditLogDO resetLog = audits(created.getUsername()).stream()
+                .filter(item -> item.getSummary() != null && item.getSummary().contains("重置"))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("UPDATE", resetLog.getAction());
+        assertFalse(resetLog.getSummary().contains("Secret@123"));
+
+        int before = audits(admin.getUsername()).size();
+        UserSaveDTO self = new UserSaveDTO();
+        self.setRealName("自己");
+        self.setRole(UserRole.ADMIN.name());
+        self.setEnabled(false);
+        assertThrows(BusinessException.class, () -> userService.update(admin, admin.getUserId(), self));
+        assertEquals(before, audits(admin.getUsername()).size());
+        assertEquals(1, sysUserDao.selectById(admin.getUserId()).getEnabled());
+    }
+
+    private List<AuditLogDO> audits(String username) {
+        return auditLogDao.selectList(Wrappers.<AuditLogDO>lambdaQuery()
+                .eq(AuditLogDO::getObjectNo, username)
+                .orderByAsc(AuditLogDO::getId));
     }
 
     private UserSaveDTO newUser(String username, UserRole role) {

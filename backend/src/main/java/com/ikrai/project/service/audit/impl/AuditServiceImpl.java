@@ -190,6 +190,8 @@ public class AuditServiceImpl implements AuditService {
             case "LOCATION" -> "地点";
             case "STOCKTAKE" -> "盘点";
             case "AUDIT" -> "审计";
+            case "BORROW" -> "领用";
+            case "USER" -> "用户";
             default -> module;
         };
     }
@@ -210,6 +212,10 @@ public class AuditServiceImpl implements AuditService {
             case "SCRAP" -> "报废";
             case "MARK" -> "标记";
             case "FINISH" -> "结束";
+            case "APPROVE" -> "通过";
+            case "REJECT" -> "驳回";
+            case "ISSUE" -> "发放";
+            case "RETURN" -> "归还";
             default -> action;
         };
     }

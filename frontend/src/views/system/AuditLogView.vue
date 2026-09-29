@@ -20,6 +20,8 @@ const modules = [
   { value: 'LOCATION', label: '地点' },
   { value: 'STOCKTAKE', label: '盘点' },
   { value: 'AUDIT', label: '审计' },
+  { value: 'BORROW', label: '领用' },
+  { value: 'USER', label: '用户' },
 ]
 
 const query = reactive({

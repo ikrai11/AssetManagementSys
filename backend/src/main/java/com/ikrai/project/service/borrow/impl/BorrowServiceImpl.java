@@ -12,11 +12,13 @@ import com.ikrai.project.common.exception.BusinessException;
 import com.ikrai.project.common.exception.ConflictException;
 import com.ikrai.project.common.exception.NotFoundException;
 import com.ikrai.project.dao.AssetDao;
+import com.ikrai.project.dao.AuditLogDao;
 import com.ikrai.project.dao.BorrowLogDao;
 import com.ikrai.project.dao.BorrowOrderDao;
 import com.ikrai.project.dao.BorrowRenewDao;
 import com.ikrai.project.dao.SysUserDao;
 import com.ikrai.project.dataobject.AssetDO;
+import com.ikrai.project.dataobject.AuditLogDO;
 import com.ikrai.project.dataobject.BorrowLogDO;
 import com.ikrai.project.dataobject.BorrowOrderDO;
 import com.ikrai.project.dataobject.BorrowRenewDO;
@@ -56,6 +58,7 @@ public class BorrowServiceImpl implements BorrowService {
     private final BorrowRenewDao borrowRenewDao;
     private final SysParamService sysParamService;
     private final MessageManager messageManager;
+    private final AuditLogDao auditLogDao;
 
     public BorrowServiceImpl(BorrowOrderDao borrowOrderDao,
                              BorrowLogDao borrowLogDao,
@@ -65,7 +68,8 @@ public class BorrowServiceImpl implements BorrowService {
                              BorrowManager borrowManager,
                              BorrowRenewDao borrowRenewDao,
                              SysParamService sysParamService,
-                             MessageManager messageManager) {
+                             MessageManager messageManager,
+                             AuditLogDao auditLogDao) {
         this.borrowOrderDao = borrowOrderDao;
         this.borrowLogDao = borrowLogDao;
         this.assetDao = assetDao;
@@ -75,6 +79,7 @@ public class BorrowServiceImpl implements BorrowService {
         this.borrowRenewDao = borrowRenewDao;
         this.sysParamService = sysParamService;
         this.messageManager = messageManager;
+        this.auditLogDao = auditLogDao;
     }
 
     @Override
@@ -156,6 +161,7 @@ public class BorrowServiceImpl implements BorrowService {
         borrowManager.saveLog(order.getId(), BorrowLogAction.APPROVE, admin.getUserId(), null);
         notifyApplicant(order, asset, MessageType.APPROVAL_RESULT, "领用申请已通过",
                 "单号：" + order.getOrderNo() + "\n设备：" + assetText(asset) + "\n请等待管理员发放。");
+        writeAudit(admin, order.getOrderNo(), "APPROVE", "通过领用 " + order.getOrderNo() + "，设备 " + assetText(asset));
         return toVo(borrowOrderDao.selectById(order.getId()), false);
     }
 
@@ -177,6 +183,7 @@ public class BorrowServiceImpl implements BorrowService {
         borrowManager.saveLog(order.getId(), BorrowLogAction.REJECT, admin.getUserId(), comment.trim());
         notifyApplicant(order, asset, MessageType.APPROVAL_RESULT, "领用申请已驳回",
                 "单号：" + order.getOrderNo() + "\n设备：" + assetText(asset) + "\n原因：" + comment.trim());
+        writeAudit(admin, order.getOrderNo(), "REJECT", "驳回领用 " + order.getOrderNo() + "，原因：" + comment.trim());
         return toVo(borrowOrderDao.selectById(order.getId()), false);
     }
 
@@ -202,6 +209,7 @@ public class BorrowServiceImpl implements BorrowService {
         notifyApplicant(order, asset, MessageType.ISSUE, "设备已发放",
                 "单号：" + order.getOrderNo() + "\n设备：" + assetText(asset)
                         + "\n预计归还日：" + order.getExpectedReturnDate());
+        writeAudit(admin, order.getOrderNo(), "ISSUE", "发放 " + order.getOrderNo() + "，设备 " + assetText(asset));
         return toVo(borrowOrderDao.selectById(order.getId()), false);
     }
 
@@ -240,6 +248,7 @@ public class BorrowServiceImpl implements BorrowService {
         borrowManager.saveLog(order.getId(), BorrowLogAction.CONFIRM_RETURN, admin.getUserId(), blankToNull(comment));
         notifyApplicant(order, asset, MessageType.RETURN_CONFIRM, "归还已确认",
                 "单号：" + order.getOrderNo() + "\n设备：" + assetText(asset) + "\n设备已回到在库。");
+        writeAudit(admin, order.getOrderNo(), "RETURN", "确认归还 " + order.getOrderNo() + "，设备 " + assetText(asset));
         return toVo(borrowOrderDao.selectById(order.getId()), false);
     }
 
@@ -405,6 +414,16 @@ public class BorrowServiceImpl implements BorrowService {
         }
     }
 
+    private void writeAudit(AuthUser operator, String orderNo, String action, String summary) {
+        AuditLogDO log = new AuditLogDO();
+        log.setOperatorId(operator.getUserId());
+        log.setModule("BORROW");
+        log.setAction(action);
+        log.setObjectNo(orderNo);
+        log.setSummary(StrUtil.sub(summary, 0, 500));
+        auditLogDao.insert(log);
+    }
+
     private String blankToNull(String value) {
         return StrUtil.trimToNull(value);
     }
@@ -511,6 +530,8 @@ public class BorrowServiceImpl implements BorrowService {
                 + "\n设备：" + assetText(asset)
                 + "\n预计归还日已更新为：" + renew.getNewReturnDate();
         notifyRenewResult(order, "续借已通过", content);
+        writeAudit(admin, order.getOrderNo(), "APPROVE",
+                "通过续借 " + order.getOrderNo() + "，预计归还日改为 " + renew.getNewReturnDate());
         return toRenewVo(borrowRenewDao.selectById(renew.getId()));
     }
 
@@ -545,6 +566,7 @@ public class BorrowServiceImpl implements BorrowService {
                 + "\n预计归还日仍为：" + oldDate
                 + "\n原因：" + comment.trim();
         notifyRenewResult(order, "续借已驳回", content);
+        writeAudit(admin, order.getOrderNo(), "REJECT", "驳回续借 " + order.getOrderNo() + "，原因：" + comment.trim());
         return toRenewVo(borrowRenewDao.selectById(renew.getId()));
     }
 

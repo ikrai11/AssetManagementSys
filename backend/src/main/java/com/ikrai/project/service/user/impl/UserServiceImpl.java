@@ -8,8 +8,10 @@ import com.ikrai.project.common.AuthUser;
 import com.ikrai.project.common.enums.UserRole;
 import com.ikrai.project.common.exception.BusinessException;
 import com.ikrai.project.common.exception.NotFoundException;
+import com.ikrai.project.dao.AuditLogDao;
 import com.ikrai.project.dao.SysDeptDao;
 import com.ikrai.project.dao.SysUserDao;
+import com.ikrai.project.dataobject.AuditLogDO;
 import com.ikrai.project.dataobject.SysDeptDO;
 import com.ikrai.project.dataobject.SysUserDO;
 import com.ikrai.project.dto.ResetPasswordDTO;
@@ -30,17 +32,19 @@ public class UserServiceImpl implements UserService {
 
     private final SysUserDao sysUserDao;
     private final SysDeptDao sysDeptDao;
+    private final AuditLogDao auditLogDao;
     private final PasswordEncoder passwordEncoder;
 
-    public UserServiceImpl(SysUserDao sysUserDao, SysDeptDao sysDeptDao, PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(SysUserDao sysUserDao, SysDeptDao sysDeptDao, AuditLogDao auditLogDao, PasswordEncoder passwordEncoder) {
         this.sysUserDao = sysUserDao;
         this.sysDeptDao = sysDeptDao;
+        this.auditLogDao = auditLogDao;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     @Transactional
-    public UserVO create(UserSaveDTO dto) {
+    public UserVO create(AuthUser operator, UserSaveDTO dto) {
         if (StrUtil.isBlank(dto.getUsername())) {
             throw new BusinessException("账号不能为空");
         }
@@ -55,6 +59,7 @@ public class UserServiceImpl implements UserService {
         user.setMustChangePassword(1);
         fillProfile(user, dto, true);
         sysUserDao.insert(user);
+        writeAudit(operator, user.getUsername(), "CREATE", "新增用户 " + user.getUsername() + "，角色" + roleLabel(user.getRole()));
         return toVo(sysUserDao.selectById(user.getId()));
     }
 
@@ -62,7 +67,9 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserVO update(AuthUser operator, Long id, UserSaveDTO dto) {
         SysUserDO user = requireUser(id);
-        boolean willEnable = dto.getEnabled() == null ? user.getEnabled() != null && user.getEnabled() == 1 : dto.getEnabled();
+        String oldRole = user.getRole();
+        boolean wasEnabled = user.getEnabled() != null && user.getEnabled() == 1;
+        boolean willEnable = dto.getEnabled() == null ? wasEnabled : dto.getEnabled();
         if (Objects.equals(operator.getUserId(), id) && user.getEnabled() != null && user.getEnabled() == 1 && !willEnable) {
             throw new BusinessException("不能停用自己");
         }
@@ -74,6 +81,7 @@ public class UserServiceImpl implements UserService {
             bumpToken(user);
         }
         sysUserDao.updateById(user);
+        writeAudit(operator, user.getUsername(), "UPDATE", updateSummary(user.getUsername(), oldRole, newRole, wasEnabled, willEnable));
         return toVo(sysUserDao.selectById(id));
     }
 
@@ -85,6 +93,7 @@ public class UserServiceImpl implements UserService {
         user.setMustChangePassword(1);
         bumpToken(user);
         sysUserDao.updateById(user);
+        writeAudit(operator, user.getUsername(), "UPDATE", "重置用户 " + user.getUsername() + " 的密码");
     }
 
     @Override
@@ -180,6 +189,40 @@ public class UserServiceImpl implements UserService {
 
     private void bumpToken(SysUserDO user) {
         user.setTokenVersion(user.getTokenVersion() == null ? 1 : user.getTokenVersion() + 1);
+    }
+
+    private String updateSummary(String username, String oldRole, String newRole, boolean wasEnabled, boolean willEnable) {
+        String summary = "修改用户 " + username;
+        if (!Objects.equals(oldRole, newRole)) {
+            summary += "，角色由" + roleLabel(oldRole) + "改为" + roleLabel(newRole);
+        }
+        if (wasEnabled != willEnable) {
+            summary += willEnable ? "，已启用" : "，已停用";
+        }
+        if (Objects.equals(oldRole, newRole) && wasEnabled == willEnable) {
+            summary += "，资料已更新";
+        }
+        return summary;
+    }
+
+    private String roleLabel(String role) {
+        if (UserRole.ADMIN.name().equals(role)) {
+            return "系统管理员";
+        }
+        if (UserRole.USER.name().equals(role)) {
+            return "普通用户";
+        }
+        return role == null ? "" : role;
+    }
+
+    private void writeAudit(AuthUser operator, String username, String action, String summary) {
+        AuditLogDO log = new AuditLogDO();
+        log.setOperatorId(operator.getUserId());
+        log.setModule("USER");
+        log.setAction(action);
+        log.setObjectNo(username);
+        log.setSummary(StrUtil.sub(summary, 0, 500));
+        auditLogDao.insert(log);
     }
 
     private SysUserDO requireUser(Long id) {
